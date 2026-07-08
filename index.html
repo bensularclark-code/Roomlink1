@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoomLink — Student Accommodation Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+  :root{
+    --lemon-a:#F4E836;
+    --lemon-b:#BFE01A;
+    --lemon-grad: linear-gradient(135deg, var(--lemon-a), var(--lemon-b));
+    --ink:#14171A;
+    --muted:#6B7280;
+    --line:#E9EAEC;
+    --card:#F7F8F5;
+    --bg:#FFFFFF;
+    --white:#FFFFFF;
+    --danger:#D64545;
+    --shadow: 0 10px 30px rgba(20,23,26,0.08);
+    --radius:16px;
+    --glass-bg: rgba(255,255,255,0.55);
+    --glass-border: rgba(255,255,255,0.6);
+  }
+  [data-theme="dark"]{
+    --ink:#F5F6F2;
+    --muted:#9AA0A6;
+    --line:#2A2C30;
+    --card:#1B1C1F;
+    --bg:#101114;
+    --white:#1B1C1F;
+    --shadow: 0 10px 30px rgba(0,0,0,0.45);
+    --glass-bg: rgba(30,32,36,0.55);
+    --glass-border: rgba(255,255,255,0.08);
+  }
+  .glass{
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid var(--glass-border);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    transition:background .3s ease, color .3s ease;
+  }
+  h1,h2,h3,.display{
+    font-family:'Sora',sans-serif;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    margin:0;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input,textarea,select{font-family:inherit;}
+  a{color:inherit;text-decoration:none;}
+  ::selection{background:var(--lemon-b);color:var(--ink);}
+
+  .app{max-width:1100px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+  .fade-in{animation:fadeIn .4s ease both;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  header.topbar{
+    display:flex;flex-direction:column;gap:12px;
+    padding:14px 20px;position:sticky;top:0;z-index:30;
+    background:var(--glass-bg);
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    border-bottom:1px solid var(--glass-border);
+  }
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;}
+  .brand{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .brand-mark{
+    width:36px;height:36px;border-radius:11px;
+    background:var(--lemon-grad);display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .brand-mark svg{width:18px;height:18px;color:var(--ink);}
+  .brand-name{font-size:19px;font-weight:800;}
+
+  nav.tabs{display:flex;gap:3px;background:var(--card);padding:4px;border-radius:12px;overflow-x:auto;}
+  nav.tabs button{
+    padding:9px 14px;border-radius:9px;color:var(--muted);
+    font-size:12.5px;font-weight:700;transition:all .18s ease;white-space:nowrap;
+  }
+  nav.tabs button.active{background:var(--lemon-grad);color:var(--ink);}
+
+  .top-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .icon-btn{
+    width:38px;height:38px;border-radius:50%;background:var(--card);
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    transition:transform .15s ease;
+  }
+  .icon-btn:hover{transform:scale(1.06);}
+  .icon-btn svg{width:17px;height:17px;}
+  .account-chip{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;background:var(--card);border:1px solid var(--line);transition:transform .15s ease;}
+  .account-chip:hover{transform:scale(1.03);}
+  .account-chip .chip-avatar{width:30px;height:30px;border-radius:50%;background:var(--lemon-grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;color:var(--ink);overflow:hidden;flex-shrink:0;}
+  .account-chip .chip-avatar img{width:100%;height:100%;object-fit:cover;}
+  .account-chip .chip-label{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;max-width:96px;overflow:hidden;text-overflow:ellipsis;}
+  .notif-btn{position:relative;}
+  .notif-dot{position:absolute;top:6px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--danger);border:2px solid var(--bg);}
+  .notif-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+  .notif-row:last-child{border-bottom:none;}
+  .notif-row .notif-icon{width:34px;height:34px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink);}
+  .notif-row .notif-icon svg{width:15px;height:15px;}
+  .notif-row.unread{background:color-mix(in srgb, var(--lemon-a) 12%, transparent);border-radius:12px;padding:12px;}
+  .notif-row p{font-size:13px;line-height:1.4;margin:0;}
+  .notif-row .notif-time{font-size:11px;color:var(--muted);margin-top:3px;}
+  .comment-reply-btn{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:4px;display:inline-flex;align-items:center;gap:4px;}
+  .comment-thread{margin-left:42px;margin-top:10px;}
+  .like-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);}
+  .like-btn.liked{color:var(--danger);}
+  .like-btn svg{width:16px;height:16px;}
+
+  main{flex:1;padding:24px 20px 100px;}
+
+  .hero{margin-bottom:22px;}
+  .hero .eyebrow{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--ink);background:var(--lemon-grad);display:inline-block;padding:4px 10px;border-radius:99px;margin-bottom:10px;}
+  .hero h1{font-size:30px;line-height:1.1;margin-bottom:8px;}
+  .hero p{color:var(--muted);font-size:14.5px;max-width:540px;line-height:1.55;}
+
+  .browse-layout{display:flex;gap:22px;align-items:flex-start;}
+  .filters{width:230px;flex-shrink:0;border-radius:var(--radius);padding:18px;position:sticky;top:88px;}
+  .filters h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px;}
+  .filter-group{margin-bottom:18px;}
+  .filter-group label{display:block;font-size:12.5px;font-weight:700;margin-bottom:7px;}
+  .filter-group select, .filter-group input[type=range]{width:100%;accent-color:var(--lemon-b);}
+  .filter-group select{border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:var(--white);color:var(--ink);}
+  .price-val{font-size:12.5px;color:var(--ink);font-weight:700;margin-top:4px;}
+  .reset-link{font-size:12px;color:var(--muted);text-decoration:underline;}
+
+  .results-col{flex:1;min-width:0;}
+  .results-count{font-size:13px;color:var(--muted);margin-bottom:14px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
+  .listing-card{
+    background:var(--white);border-radius:18px;overflow:hidden;border:1px solid var(--line);
+    cursor:pointer;transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .listing-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+  .thumb{height:130px;display:flex;align-items:center;justify-content:center;position:relative;background:var(--card);}
+  .thumb svg{width:32px;height:32px;opacity:.5;}
+  .protected-badge{
+    position:absolute;top:10px;right:10px;background:var(--lemon-grad);color:var(--ink);
+    font-size:10px;font-weight:800;letter-spacing:.02em;padding:5px 9px;border-radius:99px;
+    display:flex;align-items:center;gap:4px;
+  }
+  .protected-badge svg{width:10px;height:10px;}
+  .price-tag{position:absolute;bottom:10px;left:10px;background:rgba(20,23,26,0.85);color:#fff;font-size:13px;font-weight:700;padding:6px 11px;border-radius:10px;}
+  .listing-body{padding:14px 15px 16px;}
+  .listing-body h3{font-size:15px;font-weight:700;margin-bottom:5px;line-height:1.3;}
+  .listing-body .meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:3px;}
+  .roomtype-pill{display:inline-block;font-size:10.5px;font-weight:700;color:var(--ink);background:var(--card);border:1px solid var(--line);padding:3px 9px;border-radius:99px;margin-top:8px;}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty svg{width:42px;height:42px;opacity:.35;margin-bottom:12px;}
+  .empty h3{font-size:16px;color:var(--ink);margin-bottom:4px;}
+
+  .form-wrap{max-width:560px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
+  .field .hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .field input, .field textarea, .field select{
+    width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;
+    font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s ease;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--lemon-b);}
+  .field textarea{resize:vertical;min-height:80px;}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;}
+  .checkbox-row{display:flex;align-items:flex-start;gap:10px;background:var(--card);border-radius:12px;padding:13px 14px;margin-bottom:16px;}
+  .checkbox-row input{margin-top:2px;width:16px;height:16px;accent-color:var(--lemon-b);}
+  .checkbox-row .txt strong{font-size:13.5px;display:block;margin-bottom:2px;}
+  .checkbox-row .txt span{font-size:12px;color:var(--muted);}
+
+  .btn-primary{
+    background:var(--lemon-grad);color:var(--ink);padding:13px 22px;border-radius:12px;font-weight:800;font-size:14px;
+    display:inline-flex;align-items:center;gap:8px;transition:transform .12s ease;
+  }
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .btn-secondary{background:var(--card);color:var(--ink);padding:13px 22px;border-radius:12px;font-weight:700;font-size:14px;border:1px solid var(--line);}
+  .btn-full{width:100%;justify-content:center;}
+  .btn-text{font-size:13px;font-weight:700;color:var(--ink);text-decoration:underline;}
+
+  .category-pick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;}
+  .category-pick button{padding:14px 8px;border-radius:13px;border:1.5px solid var(--line);background:var(--white);font-weight:700;font-size:12.5px;color:var(--muted);}
+  .category-pick button.active{border-color:var(--lemon-b);color:var(--ink);background:var(--card);}
+
+  .overlay{position:fixed;inset:0;background:rgba(20,23,26,.5);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  .overlay.open{opacity:1;pointer-events:auto;}
+  @media(min-width:640px){.overlay{align-items:center;}}
+  .overlay.center-modal{align-items:center;}
+  .overlay.center-modal .sheet{border-radius:22px;max-width:380px;transform:none;}
+  .sheet{background:var(--glass-bg);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:1px solid var(--glass-border);width:100%;max-width:540px;border-radius:22px 22px 0 0;padding:0 0 28px;max-height:90vh;overflow-y:auto;transform:translateY(30px);transition:transform .3s cubic-bezier(.2,.9,.3,1);}
+  .overlay.open .sheet{transform:translateY(0);}
+  @media(min-width:640px){.sheet{border-radius:22px;}}
+  .sheet-thumb{height:150px;display:flex;align-items:center;justify-content:center;position:relative;border-radius:22px 22px 0 0;background:var(--card);}
+  .sheet-thumb svg{width:42px;height:42px;opacity:.4;}
+  .close-x{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:var(--white);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);}
+  .sheet-content{padding:20px 22px 0;}
+  .sheet h2{font-size:20px;margin-bottom:6px;}
+  .price-row{font-size:19px;font-weight:800;margin-bottom:14px;}
+  .price-row span{font-size:12.5px;font-weight:500;color:var(--muted);}
+  .detail-meta{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .detail-meta div{font-size:12.5px;}
+  .detail-meta .label{color:var(--muted);margin-bottom:2px;}
+  .detail-meta .value{font-weight:700;}
+  .desc-full{font-size:14px;line-height:1.6;}
+
+  .landlord-box{background:var(--card);border-radius:14px;padding:16px;margin-top:16px;}
+  .landlord-box .label{font-size:11.5px;color:var(--muted);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+  .reveal-row{display:flex;align-items:center;gap:12px;}
+  .reveal-row .lock-icon{width:38px;height:38px;border-radius:50%;background:var(--white);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .reveal-row .lock-icon svg{width:17px;height:17px;}
+  .reveal-row p{font-size:12.5px;color:var(--muted);margin:0;line-height:1.4;}
+  .landlord-revealed{display:flex;align-items:center;gap:12px;}
+  .landlord-revealed .av{width:42px;height:42px;border-radius:50%;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;}
+  .landlord-revealed strong{display:block;font-size:14.5px;}
+  .landlord-revealed span{font-size:12.5px;color:var(--muted);}
+
+  .commission-note{margin-top:12px;background:var(--bg);border:1px dashed var(--line);border-radius:11px;padding:11px 13px;font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:flex-start;}
+  .commission-note svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;}
+  .sheet-actions{display:flex;gap:10px;margin-top:18px;}
+
+  .explain-wrap{max-width:760px;}
+  .flow-row{display:flex;align-items:stretch;gap:8px;margin:22px 0;flex-wrap:wrap;}
+  .flow-card{flex:1;min-width:160px;background:var(--card);border-radius:16px;padding:18px 16px;text-align:center;}
+  .flow-card .icon-circle{width:44px;height:44px;border-radius:12px;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
+  .flow-card .icon-circle svg{width:20px;height:20px;}
+  .flow-card h4{font-size:13.5px;margin-bottom:6px;}
+  .flow-card p{font-size:11.5px;color:var(--muted);line-height:1.4;}
+  .flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--line);flex:0 0 24px;}
+  @media(max-width:700px){.flow-arrow{display:none;}}
+
+  .calc-box{background:var(--ink);border-radius:20px;padding:26px 24px;color:#fff;margin-top:8px;overflow:hidden;}
+  [data-theme="dark"] .calc-box{background:var(--card);border:1px solid var(--line);}
+  .calc-box h3{color:inherit;font-size:17px;margin-bottom:4px;}
+  .calc-box .sub{font-size:12.5px;color:#B8BCC2;margin-bottom:18px;}
+  .calc-row{margin-bottom:16px;}
+  .calc-row-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;}
+  .calc-row label{font-size:12.5px;color:#B8BCC2;flex-shrink:0;}
+  .calc-row input[type=range]{width:100%;accent-color:var(--lemon-b);}
+  .calc-amount{font-family:'Sora',sans-serif;font-size:clamp(15px,4.5vw,24px);font-weight:800;text-align:right;word-break:break-word;min-width:0;}
+  .calc-split{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .calc-split .seg{flex:1;min-width:96px;background:rgba(255,255,255,0.08);border-radius:13px;padding:14px 10px;overflow:hidden;}
+  .calc-split .seg .lbl{font-size:11px;color:#B8BCC2;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .calc-split .seg .num{font-family:'Sora',sans-serif;font-size:clamp(13px,3.6vw,18px);font-weight:800;word-break:break-word;}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:13px 22px;border-radius:14px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:all .3s ease;z-index:80;max-width:90vw;}
+  [data-theme="dark"] .toast{background:var(--lemon-grad);color:var(--ink);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  footer.note{text-align:center;padding:18px;font-size:11.5px;color:var(--muted);}
+
+  /* Progress bar */
+  .progress-wrap{margin:18px 0 8px;}
+  .progress-track{display:flex;align-items:center;}
+  .progress-step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;}
+  .progress-dot{width:30px;height:30px;border-radius:50%;background:var(--card);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--muted);z-index:2;transition:all .4s ease;}
+  .progress-step.done .progress-dot{background:var(--lemon-grad);border-color:transparent;color:var(--ink);}
+  .progress-step.active .progress-dot{border-color:var(--lemon-b);color:var(--ink);animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(191,224,26,.5);}70%{box-shadow:0 0 0 8px rgba(191,224,26,0);}100%{box-shadow:0 0 0 0 rgba(191,224,26,0);}}
+  .progress-line{position:absolute;top:15px;left:-50%;width:100%;height:2px;background:var(--line);z-index:1;}
+  .progress-step.done .progress-line{background:var(--lemon-b);}
+  .progress-step:first-child .progress-line{display:none;}
+  .progress-label{font-size:11px;font-weight:700;margin-top:8px;text-align:center;color:var(--muted);}
+  .progress-step.done .progress-label, .progress-step.active .progress-label{color:var(--ink);}
+
+  .rental-card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;}
+  .rental-card h3{font-size:15px;margin-bottom:2px;}
+  .rental-card .sub{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .rental-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .dispute-link{font-size:12px;color:var(--danger);text-decoration:underline;font-weight:700;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+  .stat-card{background:var(--glass-bg);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);border:1px solid var(--glass-border);border-radius:14px;padding:16px;}
+  .stat-card .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .stat-card .val{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;}
+
+  .ref-box{background:var(--ink);color:#fff;border-radius:16px;padding:20px;margin-bottom:20px;}
+  [data-theme="dark"] .ref-box{background:var(--card);border:1px solid var(--line);color:var(--ink);}
+  .ref-box .lbl{font-size:12px;color:#B8BCC2;margin-bottom:10px;}
+  [data-theme="dark"] .ref-box .lbl{color:var(--muted);}
+  .ref-link-row{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,0.08);border-radius:11px;padding:11px 13px;}
+  [data-theme="dark"] .ref-link-row{background:var(--bg);}
+  .ref-link-row code{flex:1;font-size:12.5px;overflow-x:auto;white-space:nowrap;}
+  .ref-share-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+
+  .coming-soon-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;color:var(--muted);background:var(--card);padding:4px 9px;border-radius:99px;margin-left:8px;}
+
+  .auth-tabs{display:flex;gap:4px;background:var(--card);padding:4px;border-radius:12px;margin-bottom:20px;}
+  .auth-tabs button{flex:1;padding:10px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted);}
+  .auth-tabs button.active{background:var(--lemon-grad);color:var(--ink);}
+  .auth-error{background:#FDEDED;color:var(--danger);border-radius:10px;padding:10px 13px;font-size:12.5px;font-weight:600;margin-bottom:14px;}
+  [data-theme="dark"] .auth-error{background:rgba(214,69,69,0.15);}
+  .auth-success{background:var(--card);color:var(--ink);border-radius:10px;padding:10px 13px;font-size:12.5px;font-weight:600;margin-bottom:14px;border:1px solid var(--line);}
+  .welcome-wrap{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 26px 30px;}
+  .welcome-circle{width:84px;height:84px;border-radius:50%;background:var(--lemon-grad);display:flex;align-items:center;justify-content:center;margin-bottom:22px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both;}
+  @keyframes popIn{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  .welcome-circle svg{width:38px;height:38px;color:var(--ink);overflow:visible;}
+  .welcome-circle svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:drawCheck .45s ease .35s forwards;}
+  @keyframes drawCheck{to{stroke-dashoffset:0;}}
+  .welcome-wrap h2{font-size:21px;margin-bottom:8px;animation:fadeIn .4s ease .2s both;}
+  .welcome-wrap p{font-size:13.5px;color:var(--muted);line-height:1.55;max-width:340px;animation:fadeIn .4s ease .3s both;}
+  .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+  .pw-toggle svg{width:16px;height:16px;}
+  .pw-strength-track{height:4px;border-radius:99px;background:var(--line);margin-top:9px;overflow:hidden;}
+  .pw-strength-fill{height:100%;width:0%;background:var(--danger);transition:width .25s ease, background .25s ease;}
+  .pw-strength-label{font-size:10.5px;color:var(--muted);margin-top:5px;font-weight:700;}
+  .pw-checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:10px;}
+  .pw-req{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;transition:color .2s ease;}
+  .pw-req .dot{width:14px;height:14px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease;}
+  .pw-req .dot svg{width:9px;height:9px;color:transparent;}
+  .pw-req.met{color:var(--ink);}
+  .pw-req.met .dot{background:var(--lemon-grad);}
+  .pw-req.met .dot svg{color:var(--ink);}
+
+  @media(max-width:760px){
+    .browse-layout{flex-direction:column;}
+    .filters{width:100%;position:static;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;}
+    .filter-group{margin-bottom:0;flex:1;min-width:130px;}
+  }
+  @media(max-width:600px){
+    header.topbar{padding:12px 16px;}
+    main{padding:18px 16px 90px;}
+    .hero h1{font-size:22px;}
+    .field-row{flex-direction:column;gap:0;}
+    .category-pick{grid-template-columns:repeat(2,1fr);}
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+    .thumb{height:100px;}
+    .listing-body{padding:10px 11px 12px;}
+    .listing-body h3{font-size:13px;}
+    .price-tag{font-size:11px;padding:5px 8px;}
+    .protected-badge{font-size:9px;padding:4px 7px;}
+    .brand-name{font-size:16px;}
+    .account-chip .chip-label{max-width:56px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/></svg>
+        </div>
+        <div class="brand-name">RoomLink</div>
+      </div>
+      <div class="top-actions">
+        <div id="notifBtnWrap"></div>
+        <button class="icon-btn" id="themeToggle" title="Toggle dark mode"></button>
+        <div id="authBtnWrap"></div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+
+  <main id="main"></main>
+
+  <div class="toast" id="toast"></div>
+  <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+
+  <footer class="note">© RoomLink 2025 · Payment secured with Paystack</footer>
+</div>
+
+<script>
+/* ============ CONFIG ============ */
+const SUPABASE_URL = 'https://oicegvujvgfrlfbdjali.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pY2VndnVqdmdmcmxmYmRqYWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NTg4OTMsImV4cCI6MjA5OTAzNDg5M30.8IT2zqSwiL3YmeFLcLXTITKn7Q4czqkGjk_bxousi8I';
+const PAYSTACK_PUBLIC_KEY = 'pk_test_007813fd3acc3cf7ad58bf827ba95f668a99c487';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============ Icons ============ */
+const ICONS = {
+  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/>',
+  bed:'<path d="M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7"/><path d="M3 18v2M21 18v2"/><path d="M3 13h18"/><rect x="5" y="9" width="6" height="4" rx="1"/>',
+  search:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  pin:'<path d="M12 21s7-7.1 7-12a7 7 0 1 0-14 0c0 4.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  handshake:'<path d="M2 12.5 6 9l3.5 3 2-2L16 14l3-3.5 3 2.5"/><path d="M9 12 6 9 2 12.5"/>',
+  percent:'<line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2.4"/><circle cx="17" cy="17" r="2.4"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.7-3.4 3-5 5.5-5s4.8 1.6 5.5 5"/><circle cx="18" cy="9" r="2.6"/><path d="M15.7 14c2 .2 3.6 1.7 4.1 4.2"/>',
+  spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/>',
+  arrowRight:'<line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/>',
+  shield:'<path d="M12 3 4.5 6v6c0 4.6 3.1 7.9 7.5 9 4.4-1.1 7.5-4.4 7.5-9V6L12 3Z"/><polyline points="9 12 11.3 14.3 15.5 10"/>',
+  sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
+  user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
+  wallet:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h11A2.5 2.5 0 0 1 19 7.5v.5H5.5A2.5 2.5 0 0 1 3 5.5Z"/><rect x="3" y="8" width="18" height="12" rx="2.2"/><circle cx="16" cy="14" r="1.4"/>',
+  bank:'<path d="M4 10.5 12 5l8 5.5"/><rect x="4" y="10.5" width="16" height="8.5" rx="1"/><line x1="2" y1="21" x2="22" y2="21"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 13 6 8Z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  reply:'<polyline points="9 10 4 15 9 20"/><path d="M20 4v6a4 4 0 0 1-4 4H4"/>',
+  heart:'<path d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
+  heartFill:'<path fill="currentColor" d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.6 6.6A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+};
+function iconSvg(key, extra=''){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${ICONS[key]||ICONS.home}</svg>`; }
+
+/* ============ Static data ============ */
+const ROOM_TYPES = [
+  {id:'self-contain', label:'Self-Contain'},
+  {id:'room-parlour', label:'Room & Parlour'},
+  {id:'shared', label:'Shared Apartment'},
+  {id:'single-room', label:'Single Room'},
+];
+function rtLabel(id){ const r = ROOM_TYPES.find(x=>x.id===id); return r ? r.label : id; }
+const AMENITIES = ['Water Supply','Prepaid Meter','24/7 Security','Furnished','Kitchen','WiFi','Parking Space','POP Ceiling','Tiled Floor','Generator/Inverter','Wardrobe','Balcony'];
+function naira(n){ return '\u20a6' + Math.round(n||0).toLocaleString('en-NG'); }
+function esc(s){ return (s||'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function hashCode(s){ let h=0; for(let i=0;i<s.length;i++){h=(h<<5)-h+s.charCodeAt(i); h|=0;} return Math.abs(h); }
+
+/* ============ State ============ */
+let view = 'browse';
+let session = null;
+let profile = null;
+let listings = [];
+let myTransactions = [];
+let affiliateStats = null;
+let fLocation='all', fType='all', fMaxPrice=1000000;
+const PRICE_CEILING = 10000000;
+let darkMode = localStorage.getItem('rl-theme') === 'dark';
+let authMode = 'login'; // login | signup | forgot
+let pendingRentListing = null;
+
+/* Capture referral code from URL */
+(function captureRef(){
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if(ref) localStorage.setItem('rl_ref_code', ref.toUpperCase());
+})();
+
+/* ============ Theme ============ */
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  document.getElementById('themeToggle').innerHTML = iconSvg(darkMode ? 'sun' : 'moon');
+}
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  darkMode = !darkMode;
+  localStorage.setItem('rl-theme', darkMode ? 'dark':'light');
+  applyTheme();
+});
+
+/* ============ Nav ============ */
+function tabList(){
+  const base = [
+    {id:'browse', label:'Browse'},
+    {id:'list', label:'List a Room'},
+    {id:'commission', label:'How Fees Work'},
+  ];
+  if(session){
+    base.push({id:'mylistings', label:'My Listings'});
+    base.push({id:'dashboard', label:'My Rentals'});
+    if(profile && profile.is_affiliate) base.push({id:'affiliate', label:'Affiliate'});
+  }
+  return base;
+}
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = tabList().map(t=>`<button data-view="${t.id}" class="${view===t.id?'active':''}">${esc(t.label)}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    if((b.dataset.view==='dashboard' || b.dataset.view==='affiliate' || b.dataset.view==='list' || b.dataset.view==='mylistings') && !session){
+      openAuth('login'); return;
+    }
+    view = b.dataset.view; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  }));
+}
+function renderAccountButton(){
+  const wrap = document.getElementById('authBtnWrap');
+  if(session && profile){
+    const firstName = (profile.full_name || 'there').trim().split(' ')[0];
+    const initial = esc(firstName.charAt(0).toUpperCase());
+    wrap.innerHTML = `
+      <button class="account-chip" id="authBtn" title="Account">
+        <span class="chip-avatar">${profile.avatar_url ? `<img src="${esc(profile.avatar_url)}"/>` : initial}</span>
+        <span class="chip-label">Welcome, ${esc(firstName)}</span>
+      </button>
+    `;
+  } else {
+    wrap.innerHTML = `<button class="icon-btn" id="authBtn" title="Account">${iconSvg('user')}</button>`;
+  }
+  document.getElementById('authBtn').addEventListener('click', ()=>{
+    if(session) openAccountMenu(); else openAuth('login');
+  });
+}
+
+/* ============ Notifications ============ */
+let notifications = [];
+let unreadCount = 0;
+async function fetchNotifications(){
+  if(!session){ notifications = []; unreadCount = 0; return; }
+  const { data, error } = await sb.from('notifications').select('*').eq('user_id', session.user.id).order('created_at',{ascending:false}).limit(30);
+  if(error){ console.error(error); notifications = []; unreadCount = 0; return; }
+  notifications = data;
+  unreadCount = data.filter(n=>!n.is_read).length;
+}
+async function notifyUser(recipientId, type, message, listingId){
+  if(!recipientId) return;
+  try{
+    await sb.from('notifications').insert({ user_id: recipientId, type, message, listing_id: listingId || null });
+  }catch(err){ console.error('notification failed', err); }
+}
+function renderNotifBtn(){
+  const wrap = document.getElementById('notifBtnWrap');
+  if(!wrap) return;
+  if(!session){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<button class="icon-btn notif-btn" id="notifBtn" title="Notifications">${iconSvg('bell')}${unreadCount > 0 ? '<span class="notif-dot"></span>' : ''}</button>`;
+  document.getElementById('notifBtn').addEventListener('click', openNotifications);
+}
+function timeAgo(dateStr){
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if(diff < 60) return 'just now';
+  if(diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+const NOTIF_ICONS = { comment:'reply', like:'heart', boost:'spark' };
+async function openNotifications(){
+  await fetchNotifications();
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:16px">Notifications</h2>
+      <div id="notifList">
+        ${notifications.length ? notifications.map(n=>`
+          <div class="notif-row ${n.is_read ? '' : 'unread'}" data-listing="${n.listing_id||''}">
+            <div class="notif-icon">${iconSvg(NOTIF_ICONS[n.type]||'bell')}</div>
+            <div><p>${esc(n.message)}</p><div class="notif-time">${timeAgo(n.created_at)}</div></div>
+          </div>
+        `).join('') : `<div class="empty" style="padding:30px 0">${iconSvg('bell')}<h3>No notifications yet</h3><p>You'll see comments, likes, and boost updates here.</p></div>`}
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  sheet.querySelectorAll('[data-listing]').forEach(row=>row.addEventListener('click', ()=>{
+    const lid = row.dataset.listing;
+    if(lid && listings.find(x=>x.id===lid)){ closeDetail(); openDetail(lid); }
+  }));
+  // Mark unread ones as read now that they've been seen
+  const unreadIds = notifications.filter(n=>!n.is_read).map(n=>n.id);
+  if(unreadIds.length){
+    await sb.from('notifications').update({ is_read:true }).in('id', unreadIds);
+    unreadCount = 0;
+    renderNotifBtn();
+  }
+}
+
+/* ============ Toast ============ */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3800);
+}
+
+/* ============ Auth ============ */
+function passwordChecks(pw){
+  pw = pw || '';
+  return {
+    len: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    num: /[0-9]/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw),
+  };
+}
+function updatePasswordStrength(pw){
+  const checks = passwordChecks(pw);
+  Object.entries(checks).forEach(([key, met])=>{
+    const row = document.querySelector(`.pw-req[data-req="${key}"]`);
+    if(row) row.classList.toggle('met', met);
+  });
+  const metCount = Object.values(checks).filter(Boolean).length;
+  const fill = document.getElementById('pwFill');
+  const label = document.getElementById('pwLabel');
+  if(!fill || !label) return;
+  const pct = (metCount/5)*100;
+  fill.style.width = pct + '%';
+  if(metCount <= 2){ fill.style.background = 'var(--danger)'; label.textContent = 'Weak password'; }
+  else if(metCount <= 4){ fill.style.background = '#E0A733'; label.textContent = 'Medium strength'; }
+  else { fill.style.background = 'var(--lemon-b)'; label.textContent = 'Strong password'; }
+}
+
+function showWelcomeScreen(fullName, email){
+  const sheet = document.getElementById('sheet');
+  const firstName = (fullName || '').trim().split(' ')[0] || 'there';
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+      </div>
+      <h2>Welcome to RoomLink, ${esc(firstName)}!</h2>
+      <p>We've sent a verification link to <strong>${esc(email)}</strong>. Confirm your email, then log in to start browsing or listing rooms.</p>
+      <button class="btn-primary" id="welcomeContinue" style="margin-top:22px">Got it — take me to log in</button>
+    </div>
+  `;
+  document.getElementById('welcomeContinue').addEventListener('click', ()=>openAuth('login'));
+}
+
+function showSuccessPopup(title, message, onClose){
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  overlay.classList.add('center-modal');
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+      </div>
+      <h2>${esc(title)}</h2>
+      <p>${esc(message)}</p>
+      <button class="btn-primary" id="successPopupClose" style="margin-top:22px">Got it</button>
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('successPopupClose').addEventListener('click', ()=>{
+    closeDetail();
+    if(onClose) onClose();
+  });
+}
+
+function generateAffiliateCode(){
+  return Array.from({length:8}, ()=> '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*36)]).join('');
+}
+async function becomeAffiliate(){
+  try{
+    const code = generateAffiliateCode();
+    const { error } = await sb.from('profiles').update({ is_affiliate:true, affiliate_code: code }).eq('id', session.user.id);
+    if(error) throw error;
+    profile.is_affiliate = true;
+    profile.affiliate_code = code;
+    showSuccessPopup('You\'re now an affiliate!', 'Head to the Affiliate tab to grab your referral link and start earning 5% on rentals you bring in.');
+    renderAll();
+  }catch(err){ showToast('Could not activate affiliate status: ' + (err.message||'try again')); }
+}
+function showAffiliatePromo(){
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  overlay.classList.add('center-modal');
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle">${iconSvg('percent','width="34" height="34"')}</div>
+      <h2>Earn while you're in school</h2>
+      <p>Become a RoomLink affiliate and earn 5% every time someone rents a room through your referral link — no extra work, just share your link.</p>
+      <button class="btn-primary" id="becomeAffiliateBtn" style="margin-top:22px">Become an Affiliate</button>
+      <button class="btn-text" id="affiliatePromoCancel" style="margin-top:14px;color:var(--muted)">Cancel</button>
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('becomeAffiliateBtn').addEventListener('click', becomeAffiliate);
+  document.getElementById('affiliatePromoCancel').addEventListener('click', closeDetail);
+}
+function openAuth(mode){
+  authMode = mode;
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = authSheetHtml();
+  document.getElementById('overlay').classList.add('open');
+  wireAuthSheet();
+}
+function authSheetHtml(){
+  return `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:4px">${authMode==='signup' ? 'Create your account' : authMode==='forgot' ? 'Reset your password' : 'Log in'}</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">${authMode==='signup' ? 'Join RoomLink to list rooms and rent with protection.' : authMode==='forgot' ? "We'll email you a reset link." : 'Welcome back.'}</p>
+      ${authMode!=='forgot' ? `
+      <div class="auth-tabs">
+        <button data-m="login" class="${authMode==='login'?'active':''}">Log in</button>
+        <button data-m="signup" class="${authMode==='signup'?'active':''}">Sign up</button>
+      </div>` : ''}
+      <div id="authMsg"></div>
+      <form id="authForm">
+        ${authMode==='signup' ? `
+        <div class="field"><label>Full name</label><input name="fullName" required placeholder="e.g. Kemi Adebayo"/></div>
+        <div class="field"><label>Phone number</label><input name="phone" type="tel" required placeholder="e.g. 0803 123 4567"/></div>` : ''}
+        <div class="field"><label>Email</label><input name="email" type="email" required placeholder="you@school.edu.ng"/></div>
+        ${authMode!=='forgot' ? `
+        <div class="field">
+          <label>Password</label>
+          <div style="position:relative">
+            <input name="password" id="passwordInput" type="password" required minlength="${authMode==='signup'?8:6}" placeholder="${authMode==='signup' ? 'Create a strong password' : 'Your password'}" style="padding-right:42px"/>
+            <button type="button" class="pw-toggle" id="togglePw">${iconSvg('eye')}</button>
+          </div>
+          ${authMode==='signup' ? `
+          <div class="pw-strength-track"><div class="pw-strength-fill" id="pwFill"></div></div>
+          <div class="pw-strength-label" id="pwLabel">Password strength</div>
+          <div class="pw-checklist" id="pwChecklist">
+            <div class="pw-req" data-req="len"><span class="dot">${iconSvg('check')}</span>8+ characters</div>
+            <div class="pw-req" data-req="upper"><span class="dot">${iconSvg('check')}</span>Uppercase letter</div>
+            <div class="pw-req" data-req="lower"><span class="dot">${iconSvg('check')}</span>Lowercase letter</div>
+            <div class="pw-req" data-req="num"><span class="dot">${iconSvg('check')}</span>A number</div>
+            <div class="pw-req" data-req="special"><span class="dot">${iconSvg('check')}</span>Special character</div>
+          </div>` : ''}
+        </div>` : ''}
+        ${authMode==='signup' ? `
+        <div class="checkbox-row">
+          <input type="checkbox" name="isAffiliate" id="isAffiliate"/>
+          <div class="txt"><strong>Also become an affiliate</strong><span>Share your referral link and earn 5% when someone rents through it.</span></div>
+        </div>` : ''}
+        <button type="submit" class="btn-primary btn-full" id="authSubmit">
+          ${authMode==='signup' ? 'Create account' : authMode==='forgot' ? 'Send reset link' : 'Log in'}
+        </button>
+      </form>
+      ${authMode==='login' ? `<button class="btn-text" id="toForgot" style="margin-top:14px">Forgot password?</button>` : ''}
+      ${authMode==='forgot' ? `<button class="btn-text" id="backToLogin" style="margin-top:14px">Back to log in</button>` : ''}
+    </div>
+  `;
+}
+function wireAuthSheet(){
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  document.querySelectorAll('.auth-tabs button').forEach(b=>b.addEventListener('click', ()=>openAuth(b.dataset.m)));
+  const toForgot = document.getElementById('toForgot');
+  if(toForgot) toForgot.addEventListener('click', ()=>openAuth('forgot'));
+  const backToLogin = document.getElementById('backToLogin');
+  if(backToLogin) backToLogin.addEventListener('click', ()=>openAuth('login'));
+
+  const pwInput = document.getElementById('passwordInput');
+  const togglePw = document.getElementById('togglePw');
+  if(togglePw) togglePw.addEventListener('click', ()=>{
+    const isHidden = pwInput.type === 'password';
+    pwInput.type = isHidden ? 'text' : 'password';
+    togglePw.innerHTML = iconSvg(isHidden ? 'eyeOff' : 'eye');
+  });
+  if(pwInput && document.getElementById('pwChecklist')){
+    pwInput.addEventListener('input', ()=>updatePasswordStrength(pwInput.value));
+  }
+
+  document.getElementById('authForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const msgEl = document.getElementById('authMsg');
+    const submitBtn = document.getElementById('authSubmit');
+    msgEl.innerHTML = '';
+    if(authMode==='signup'){
+      const checks = passwordChecks(fd.get('password'));
+      if(!Object.values(checks).every(Boolean)){
+        msgEl.innerHTML = `<div class="auth-error">Your password doesn't meet all the requirements yet.</div>`;
+        return;
+      }
+    }
+    submitBtn.disabled = true;
+    try{
+      if(authMode==='signup'){
+        const { error } = await sb.auth.signUp({
+          email: fd.get('email'), password: fd.get('password'),
+          options:{ data:{ full_name: fd.get('fullName'), phone: fd.get('phone'), is_affiliate: !!fd.get('isAffiliate') },
+                    emailRedirectTo: window.location.origin + window.location.pathname }
+        });
+        if(error) throw error;
+        showWelcomeScreen(fd.get('fullName'), fd.get('email'));
+        e.target.reset();
+      } else if(authMode==='login'){
+        const { error } = await sb.auth.signInWithPassword({ email: fd.get('email'), password: fd.get('password') });
+        if(error){
+          if(/email not confirmed/i.test(error.message)){
+            msgEl.innerHTML = `<div class="auth-error">Please verify your email first. <button type="button" id="resendBtn" class="btn-text" style="color:var(--danger)">Resend verification link</button></div>`;
+            submitBtn.disabled = false;
+            const resendBtn = document.getElementById('resendBtn');
+            if(resendBtn) resendBtn.addEventListener('click', async ()=>{
+              await sb.auth.resend({ type:'signup', email: fd.get('email') });
+              showToast('Verification link resent.');
+            });
+            return;
+          }
+          throw error;
+        }
+        closeDetail();
+        await refreshSession();
+        renderAccountButton();
+        await fetchNotifications();
+        renderNotifBtn();
+        const firstName = (profile && profile.full_name || '').trim().split(' ')[0];
+        showToast(firstName ? `Welcome back, ${firstName}!` : 'Welcome back!');
+        view='browse'; renderAll();
+        if(profile && !profile.is_affiliate){
+          setTimeout(showAffiliatePromo, 550);
+        }
+      } else if(authMode==='forgot'){
+        const { error } = await sb.auth.resetPasswordForEmail(fd.get('email'), { redirectTo: window.location.href });
+        if(error) throw error;
+        msgEl.innerHTML = `<div class="auth-success">Reset link sent — check your email.</div>`;
+      }
+    }catch(err){
+      msgEl.innerHTML = `<div class="auth-error">${esc(err.message || 'Something went wrong. Try again.')}</div>`;
+    }
+    submitBtn.disabled = false;
+  });
+}
+function openAccountMenu(){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div class="chip-avatar" style="width:52px;height:52px;font-size:19px" id="menuAvatarPreview">
+          ${profile && profile.avatar_url ? `<img src="${esc(profile.avatar_url)}"/>` : esc((profile && profile.full_name || 'U').charAt(0))}
+        </div>
+        <div><strong style="display:block;font-size:14.5px">${esc(profile && profile.full_name || 'Your account')}</strong><span style="font-size:12.5px;color:var(--muted)">${esc(session.user.email)}</span></div>
+      </div>
+      <label class="btn-secondary btn-full" style="display:flex;justify-content:center;margin-bottom:10px;cursor:pointer">
+        Change profile picture
+        <input type="file" id="avatarInput" accept="image/*" style="display:none"/>
+      </label>
+      <button class="btn-primary btn-full" id="signOutBtn">Log out</button>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  document.getElementById('avatarInput').addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${session.user.id}/${Date.now()}_${safeName}`;
+      const { error: upErr } = await sb.storage.from('avatars').upload(path, file);
+      if(upErr) throw upErr;
+      const { data } = sb.storage.from('avatars').getPublicUrl(path);
+      await sb.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', session.user.id);
+      profile.avatar_url = data.publicUrl;
+      renderAccountButton();
+      showSuccessPopup('Profile picture added!', 'Your new photo now shows across RoomLink, including on your comments and notifications.');
+    }catch(err){ showToast('Could not update photo: ' + (err.message||'try again')); }
+  });
+  document.getElementById('signOutBtn').addEventListener('click', async ()=>{
+    await sb.auth.signOut();
+    session=null; profile=null; notifications=[]; unreadCount=0; view='browse';
+    closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn();
+    showToast('Logged out.');
+  });
+}
+async function refreshSession(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if(session){
+    const { data: p } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+    profile = p;
+  } else { profile = null; }
+}
+sb.auth.onAuthStateChange((_event, s)=>{ session = s; });
+
+/* ============ Data: listings ============ */
+function isBoosted(l){ return !!(l.boosted_until && new Date(l.boosted_until) > new Date()); }
+let likesMap = {}; // { [listingId]: { count, likedByMe } }
+async function fetchLikesForListings(listingIds){
+  likesMap = {};
+  if(!listingIds.length) return;
+  const { data, error } = await sb.from('likes').select('listing_id, user_id').in('listing_id', listingIds);
+  if(error){ console.error(error); return; }
+  data.forEach(row=>{
+    if(!likesMap[row.listing_id]) likesMap[row.listing_id] = { count:0, likedByMe:false };
+    likesMap[row.listing_id].count++;
+    if(session && row.user_id === session.user.id) likesMap[row.listing_id].likedByMe = true;
+  });
+}
+async function toggleLike(listing){
+  if(!session){ openAuth('login'); showToast('Log in to like a listing.'); return; }
+  const current = likesMap[listing.id] || { count:0, likedByMe:false };
+  try{
+    if(current.likedByMe){
+      await sb.from('likes').delete().eq('listing_id', listing.id).eq('user_id', session.user.id);
+      likesMap[listing.id] = { count: Math.max(0, current.count - 1), likedByMe:false };
+    } else {
+      await sb.from('likes').insert({ listing_id: listing.id, user_id: session.user.id });
+      likesMap[listing.id] = { count: current.count + 1, likedByMe:true };
+      if(listing.lister_id && listing.lister_id !== session.user.id){
+        await notifyUser(listing.lister_id, 'like', `Your listing "${listing.title}" was just liked by a student.`, listing.id);
+      }
+    }
+    renderBrowse();
+  }catch(err){ showToast('Could not update like: ' + (err.message||'try again')); }
+}
+async function fetchListings(){
+  const { data, error } = await sb.from('listings').select('*').eq('status','available').order('created_at',{ascending:false});
+  if(error){ console.error(error); listings = []; return; }
+  data.sort((a,b)=>{
+    const aB = isBoosted(a), bB = isBoosted(b);
+    if(aB !== bB) return aB ? -1 : 1;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  listings = data;
+  await fetchLikesForListings(listings.map(l=>l.id));
+}
+let myListings = [];
+async function fetchMyListings(){
+  if(!session){ myListings = []; return; }
+  const { data, error } = await sb.from('listings').select('*').eq('lister_id', session.user.id).order('created_at',{ascending:false});
+  if(error){ console.error(error); myListings = []; return; }
+  myListings = data;
+}
+const BOOST_PRICE_PER_DAY = 650;
+async function startBoostPayment(listing, days){
+  if(typeof PaystackPop === 'undefined'){ showToast('Payment service failed to load. Check your connection.'); return; }
+  const amount = BOOST_PRICE_PER_DAY * days;
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: session.user.email,
+    amount: Math.round(amount * 100),
+    currency: 'NGN',
+    ref: 'rlboost_' + Date.now() + '_' + Math.floor(Math.random()*1e6),
+    callback: function(response){ handleBoostSuccess(listing, days, response.reference); },
+    onClose: function(){ showToast('Boost payment cancelled.'); }
+  });
+  handler.openIframe();
+}
+async function handleBoostSuccess(listing, days, ref){
+  try{
+    const now = new Date();
+    const currentEnd = listing.boosted_until && new Date(listing.boosted_until) > now ? new Date(listing.boosted_until) : now;
+    const newEnd = new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000);
+    await sb.from('listings').update({ boosted_until: newEnd.toISOString() }).eq('id', listing.id);
+    showToast(`Boosted! This listing will stay on the first page until ${newEnd.toLocaleDateString('en-NG', {day:'numeric', month:'short'})}.`);
+    await notifyUser(session.user.id, 'boost', `Your ad for "${listing.title}" is now live and will stay on the first page until ${newEnd.toLocaleDateString('en-NG',{day:'numeric',month:'short'})}.`, listing.id);
+    await fetchMyListings();
+    await fetchListings();
+    await fetchNotifications();
+    renderNotifBtn();
+    renderAll();
+  }catch(err){
+    showToast('Payment succeeded but boost failed to save: ' + (err.message||'contact support'));
+  }
+}
+async function createListing(payload){
+  const { error } = await sb.from('listings').insert({ ...payload, lister_id: session.user.id, status:'available' });
+  if(error) throw error;
+}
+async function uploadListingPhotos(files){
+  if(!files || !files.length) return [];
+  const urls = [];
+  for(const file of files){
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${session.user.id}/${Date.now()}_${Math.floor(Math.random()*1e6)}_${safeName}`;
+    const { error } = await sb.storage.from('listing-photos').upload(path, file);
+    if(error){ console.error('photo upload failed', error); continue; }
+    const { data } = sb.storage.from('listing-photos').getPublicUrl(path);
+    if(data && data.publicUrl) urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+/* ============ Data: transactions ============ */
+async function fetchMyTransactions(){
+  if(!session) { myTransactions = []; return; }
+  const { data, error } = await sb.from('transactions')
+    .select('*, listings(title, location, room_type, landlord_name)')
+    .eq('renter_id', session.user.id)
+    .order('created_at', { ascending:false });
+  if(error){ console.error(error); myTransactions = []; return; }
+  myTransactions = data;
+}
+async function fetchAffiliateStats(){
+  if(!session || !profile || !profile.is_affiliate){ affiliateStats = null; return; }
+  const { data, error } = await sb.from('transactions').select('*').eq('affiliate_id', session.user.id);
+  if(error){ console.error(error); affiliateStats = { count:0, pending:0, confirmed:0 }; return; }
+  const confirmed = data.filter(t=>t.status==='confirmed');
+  affiliateStats = {
+    count: data.length,
+    pendingEarnings: confirmed.reduce((s,t)=>s + Number(t.affiliate_payout||0), 0),
+    confirmedCount: confirmed.length,
+  };
+}
+
+const LANDLORD_PCT_BASE = 0.90;
+const ROOMLINK_PCT = 0.10;
+const AFFILIATE_PCT = 0.05;
+function computeSplit(rent, hasAffiliate){
+  const company = Math.round(rent * ROOMLINK_PCT);
+  const affiliate = hasAffiliate ? Math.round(rent * AFFILIATE_PCT) : 0;
+  const landlord = rent - company - affiliate;
+  return { landlord, affiliate, company };
+}
+
+/* ============ Render root ============ */
+const mainEl = document.getElementById('main');
+function renderAll(){
+  renderTabs();
+  if(view==='browse') renderBrowse();
+  else if(view==='list') renderListForm();
+  else if(view==='commission') renderCommission();
+  else if(view==='dashboard') renderDashboard();
+  else if(view==='affiliate') renderAffiliate();
+  else if(view==='mylistings') renderMyListings();
+}
+
+/* ============ Browse ============ */
+const COMMON_LOCATIONS = ['Express (Ilaro-Ibese Road)', 'Orita', 'Gbokoto', 'Oja-Odan Road', 'Ilaro Town'];
+function uniqueLocations(){
+  const fromListings = [...new Set(listings.map(l=>l.location))];
+  const merged = [...COMMON_LOCATIONS];
+  fromListings.forEach(l=>{ if(!merged.includes(l)) merged.push(l); });
+  return merged;
+}
+function renderBrowse(){
+  let list = listings.filter(l=>{
+    if(fLocation!=='all' && l.location!==fLocation) return false;
+    if(fType!=='all' && l.room_type!==fType) return false;
+    if(l.price > fMaxPrice) return false;
+    return true;
+  });
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">Verified peer listings</div>
+      <h1>Find your next room off-campus</h1>
+      <p>Browse rooms listed by fellow students. Rent is held safely until you confirm you've moved in — the landlord and referring student get paid only then.</p>
+    </div>
+    <div class="browse-layout">
+      <aside class="filters glass fade-in">
+        <h4>Filter results</h4>
+        <div class="filter-group">
+          <label>Location</label>
+          <select id="fLoc"><option value="all">All locations</option>${uniqueLocations().map(l=>`<option value="${esc(l)}" ${fLocation===l?'selected':''}>${esc(l)}</option>`).join('')}</select>
+        </div>
+        <div class="filter-group">
+          <label>Room type</label>
+          <select id="fType"><option value="all">All types</option>${ROOM_TYPES.map(t=>`<option value="${t.id}" ${fType===t.id?'selected':''}>${t.label}</option>`).join('')}</select>
+        </div>
+        <div class="filter-group">
+          <label>Max price / year</label>
+          <input type="range" id="fPrice" min="40000" max="${PRICE_CEILING}" step="10000" value="${Math.min(fMaxPrice, PRICE_CEILING)}"/>
+          <div class="price-val" id="priceVal">${naira(fMaxPrice)}</div>
+          <input type="number" id="fPriceType" min="0" step="1000" placeholder="Or type exact budget" value="${fMaxPrice}" style="margin-top:8px;width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;background:var(--white);color:var(--ink)"/>
+        </div>
+        <button class="reset-link" id="resetFilters">Reset filters</button>
+      </aside>
+      <div class="results-col">
+        <div class="results-count">${list.length} room${list.length!==1?'s':''} available</div>
+        <div class="grid" id="grid">${list.length ? list.map(listingCard).join('') : emptyHtml()}</div>
+      </div>
+    </div>
+  `;
+  mainEl.querySelector('#fLoc').addEventListener('change', e=>{ fLocation=e.target.value; renderBrowse(); });
+  mainEl.querySelector('#fType').addEventListener('change', e=>{ fType=e.target.value; renderBrowse(); });
+  const priceSlider = mainEl.querySelector('#fPrice');
+  const priceType = mainEl.querySelector('#fPriceType');
+  priceSlider.addEventListener('input', e=>{
+    fMaxPrice = Number(e.target.value);
+    mainEl.querySelector('#priceVal').textContent = naira(fMaxPrice);
+    priceType.value = fMaxPrice;
+  });
+  priceSlider.addEventListener('change', ()=> renderBrowse());
+  priceType.addEventListener('change', e=>{
+    let val = Number(e.target.value) || 0;
+    fMaxPrice = val;
+    renderBrowse();
+  });
+  mainEl.querySelector('#resetFilters').addEventListener('click', ()=>{ fLocation='all'; fType='all'; fMaxPrice=1000000; renderBrowse(); });
+  mainEl.querySelectorAll('.listing-card').forEach(c=>c.addEventListener('click', ()=>openDetail(c.dataset.id)));
+  mainEl.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click', e=>{
+    e.stopPropagation();
+    const listing = listings.find(x=>x.id===b.dataset.like);
+    if(listing) toggleLike(listing);
+  }));
+}
+function listingCard(l){
+  const cover = (l.photo_urls && l.photo_urls[0]) || null;
+  const total = l.total_rooms || 1;
+  const avail = l.available_rooms != null ? l.available_rooms : total;
+  const boosted = isBoosted(l);
+  const likeInfo = likesMap[l.id] || { count:0, likedByMe:false };
+  return `
+    <div class="listing-card fade-in" data-id="${l.id}" ${boosted ? 'style="box-shadow:0 0 0 2px var(--lemon-b)"' : ''}>
+      <div class="thumb" ${cover ? `style="background-image:url('${esc(cover)}');background-size:cover;background-position:center"` : ''}>
+        ${cover ? '' : iconSvg('home')}
+        ${boosted ? `<div class="protected-badge" style="left:10px;right:auto">${iconSvg('spark')}Boosted</div>` : ''}
+        <div class="protected-badge">${iconSvg('shield')}Rent Protected</div>
+        <div class="price-tag">${naira(l.price)}/yr</div>
+      </div>
+      <div class="listing-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <h3 style="flex:1">${esc(l.title)}</h3>
+          <button class="like-btn ${likeInfo.likedByMe ? 'liked' : ''}" data-like="${l.id}">${iconSvg(likeInfo.likedByMe ? 'heartFill' : 'heart')}${likeInfo.count > 0 ? likeInfo.count : ''}</button>
+        </div>
+        <div class="meta">${iconSvg('pin','width="13" height="13"')}${esc(l.location)}</div>
+        <span class="roomtype-pill">${rtLabel(l.room_type)}</span>
+        ${total > 1 ? `<span class="roomtype-pill" style="margin-left:6px">${avail} of ${total} rooms left</span>` : ''}
+      </div>
+    </div>`;
+}
+function emptyHtml(){ return `<div class="empty" style="grid-column:1/-1">${iconSvg('search')}<h3>No rooms match these filters</h3><p>Try widening your budget or clearing a filter.</p></div>`; }
+
+/* ============ List a room ============ */
+function renderListForm(){
+  mainEl.innerHTML = `
+    <div class="form-wrap fade-in">
+      <div class="hero">
+        <div class="eyebrow">List a room</div>
+        <h1>Know a room that's opening up?</h1>
+        <p>List it here. If a student rents through RoomLink, the referring student earns a 5% share once they confirm move-in.${profile && profile.is_affiliate ? ' Note: referral commission doesn\'t apply to your own listings — that share goes to RoomLink instead.' : ''}</p>
+      </div>
+      <form id="listForm">
+        <div class="field">
+          <label>Room type</label>
+          <div class="category-pick" id="roomTypePick">
+            ${ROOM_TYPES.map((t,i)=>`<button type="button" data-rt="${t.id}" class="${i===0?'active':''}">${t.label}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field"><label>Listing title</label><input name="title" required placeholder="e.g. Self-contain near school gate"/></div>
+        <div class="field-row">
+          <div class="field"><label>Price per room / year (\u20a6)</label><input name="price" type="number" required placeholder="e.g. 120000"/></div>
+          <div class="field"><label>Number of rooms available</label><input name="totalRooms" type="number" min="1" value="1" required placeholder="e.g. 8"/><div class="hint">Leave as 1 for a single room. For a shared building with several identical slots, enter the total.</div></div>
+        </div>
+        <div class="field"><label>Location / area</label><input name="location" required placeholder="e.g. Behind School Gate"/></div>
+        <div class="field"><label>Description</label><textarea name="description" required placeholder="Condition, facilities, when it's available from"></textarea></div>
+        <div class="field">
+          <label>Amenities</label>
+          <div class="category-pick" id="amenitiesPick" style="grid-template-columns:repeat(2,1fr)">
+            ${AMENITIES.map(a=>`<button type="button" data-amenity="${esc(a)}">${esc(a)}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>Photos</label>
+          <input type="file" id="photoInput" accept="image/*" multiple/>
+          <div class="hint">Up to 5 photos of the room and amenities. First photo becomes the cover image.</div>
+          <div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Landlord name</label><input name="landlordName" required placeholder="e.g. Mr. Adeyemi"/></div>
+          <div class="field"><label>Landlord phone</label><input name="landlordPhone" required placeholder="e.g. 080xx-xxx-xxx"/></div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="listSubmitBtn">${iconSvg('arrowRight','width="17" height="17"')}Submit listing</button>
+      </form>
+    </div>
+  `;
+  let currentRT = ROOM_TYPES[0].id;
+  let selectedAmenities = new Set();
+  let selectedFiles = [];
+  mainEl.querySelectorAll('#roomTypePick button').forEach(b=>b.addEventListener('click', ()=>{
+    currentRT = b.dataset.rt;
+    mainEl.querySelectorAll('#roomTypePick button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  mainEl.querySelectorAll('#amenitiesPick button').forEach(b=>b.addEventListener('click', ()=>{
+    const a = b.dataset.amenity;
+    if(selectedAmenities.has(a)){ selectedAmenities.delete(a); b.classList.remove('active'); }
+    else { selectedAmenities.add(a); b.classList.add('active'); }
+  }));
+  const photoInput = mainEl.querySelector('#photoInput');
+  const photoPreview = mainEl.querySelector('#photoPreview');
+  photoInput.addEventListener('change', ()=>{
+    selectedFiles = Array.from(photoInput.files).slice(0,5);
+    photoPreview.innerHTML = selectedFiles.map(f=>`<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid var(--line)"><img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover"/></div>`).join('');
+  });
+  mainEl.querySelector('#listForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const submitBtn = document.getElementById('listSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading...';
+    try{
+      const photoUrls = await uploadListingPhotos(selectedFiles);
+      const totalRooms = Math.max(1, Number(fd.get('totalRooms')) || 1);
+      await createListing({
+        title: fd.get('title').trim(), room_type: currentRT, price: Number(fd.get('price')),
+        location: fd.get('location').trim(), description: fd.get('description').trim(),
+        landlord_name: fd.get('landlordName').trim(), landlord_phone: fd.get('landlordPhone').trim(),
+        amenities: Array.from(selectedAmenities), photo_urls: photoUrls,
+        total_rooms: totalRooms, available_rooms: totalRooms,
+      });
+      showToast('Listing submitted — now live for students to browse.');
+      await fetchListings();
+      view='browse'; renderAll();
+    }catch(err){
+      showToast('Could not submit: ' + (err.message||'try again'));
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `${iconSvg('arrowRight','width="17" height="17"')}Submit listing`;
+    }
+  });
+}
+
+/* ============ Detail sheet + rent payment ============ */
+function openDetail(id){
+  const l = listings.find(x=>x.id===id);
+  if(!l) return;
+  const previewHasAffiliate = !!localStorage.getItem('rl_ref_code');
+  const { landlord, affiliate, company } = computeSplit(l.price, previewHasAffiliate);
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-thumb">${iconSvg('home','width="42" height="42"')}
+      <div class="close-x" id="closeSheet"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></div>
+    </div>
+    <div class="sheet-content">
+      <span class="roomtype-pill">${rtLabel(l.room_type)}</span>
+      <h2 style="margin-top:8px">${esc(l.title)}</h2>
+      <div class="price-row">${naira(l.price)} <span>/ ${(l.total_rooms||1) > 1 ? 'room / year' : 'year'}</span></div>
+      <p class="desc-full">${esc(l.description)}</p>
+      <div class="detail-meta">
+        <div><div class="label">Location</div><div class="value">${esc(l.location)}</div></div>
+        <div><div class="label">Status</div><div class="value">${iconSvg('shield','width="12" height="12" style="vertical-align:-1px"')} Rent protected</div></div>
+        ${(l.total_rooms||1) > 1 ? `<div><div class="label">Rooms available</div><div class="value">${l.available_rooms != null ? l.available_rooms : l.total_rooms} of ${l.total_rooms}</div></div>` : ''}
+      </div>
+      <div class="landlord-box">
+        <div class="label">How this works</div>
+        <div class="reveal-row">
+          <div class="lock-icon">${iconSvg('lock')}</div>
+          <p>Pay the full year's rent through RoomLink. Landlord contact unlocks immediately, and funds are only released once you confirm you've moved in.</p>
+        </div>
+        <div class="commission-note">${iconSvg('percent')}<span>On confirmed move-in: ${naira(landlord)} to the landlord${previewHasAffiliate ? `, ${naira(affiliate)} to the referring student` : ''}, ${naira(company)} to RoomLink.</span></div>
+      </div>
+      <div class="comments-section">
+        <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 10px">Comments</div>
+        <div id="commentsList"><div class="empty" style="padding:20px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading comments...</h3></div></div>
+        ${session ? `
+        <form id="commentForm" style="display:flex;gap:8px;margin-top:12px">
+          <input name="content" id="commentInput" required maxlength="500" placeholder="Ask a question or leave a note... (letters only)" style="flex:1;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;font-size:13.5px;color:var(--ink);background:var(--white)"/>
+          <button type="submit" class="btn-primary" style="padding:10px 16px">${iconSvg('arrowRight','width="16" height="16"')}</button>
+        </form>` : `
+        <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Log in to leave a comment.</p>`}
+      </div>
+      <div class="sheet-actions">
+        <button class="btn-primary btn-full" id="rentBtn">${iconSvg('handshake','width="17" height="17"')}Pay rent &amp; connect</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  document.getElementById('rentBtn').addEventListener('click', ()=>startRentPayment(l));
+  loadComments(l);
+  const commentInput = document.getElementById('commentInput');
+  if(commentInput) attachLettersOnlyFilter(commentInput);
+  const commentForm = document.getElementById('commentForm');
+  if(commentForm) commentForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const content = fd.get('content').trim();
+    if(!content) return;
+    try{
+      await sb.from('comments').insert({ listing_id: l.id, user_id: session.user.id, user_name: (profile && profile.full_name) || 'Student', content });
+      if(l.lister_id && l.lister_id !== session.user.id){
+        await notifyUser(l.lister_id, 'comment', `${(profile && profile.full_name) || 'A student'} commented on your listing "${l.title}".`, l.id);
+      }
+      e.target.reset();
+      await loadComments(l);
+    }catch(err){ showToast('Could not post comment: ' + (err.message||'try again')); }
+  });
+}
+function stripDigits(str){ return (str||'').replace(/[0-9]/g, ''); }
+function attachLettersOnlyFilter(inputEl){
+  inputEl.addEventListener('input', ()=>{
+    const cleaned = stripDigits(inputEl.value);
+    if(cleaned !== inputEl.value) inputEl.value = cleaned;
+  });
+}
+function commentRowHtml(c, isReply){
+  const size = isReply ? 28 : 32;
+  return `
+    <div class="comment-row" data-comment-id="${c.id}" style="display:flex;gap:10px;margin-bottom:${isReply?10:14}px">
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${isReply?11:13}px;flex-shrink:0">${esc((c.user_name||'S').charAt(0))}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700">${esc(c.user_name||'Student')}</div>
+        <div style="font-size:13px;line-height:1.5;margin-top:2px">${esc(c.content)}</div>
+        ${session ? `<button type="button" class="comment-reply-btn" data-reply-toggle="${c.id}">${iconSvg('reply','width="12" height="12"')}Reply</button>` : ''}
+        <div id="replyFormSlot-${c.id}"></div>
+      </div>
+    </div>
+  `;
+}
+function renderCommentTree(data){
+  const topLevel = data.filter(c=>!c.parent_id);
+  const repliesByParent = {};
+  data.filter(c=>c.parent_id).forEach(c=>{ (repliesByParent[c.parent_id] = repliesByParent[c.parent_id]||[]).push(c); });
+  return topLevel.map(c=>{
+    const replies = repliesByParent[c.id] || [];
+    return commentRowHtml(c,false) + (replies.length ? `<div class="comment-thread">${replies.map(r=>commentRowHtml(r,true)).join('')}</div>` : '');
+  }).join('');
+}
+async function loadComments(listing){
+  const el = document.getElementById('commentsList');
+  if(!el) return;
+  const { data, error } = await sb.from('comments').select('*').eq('listing_id', listing.id).order('created_at', { ascending:true });
+  if(error){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted)">Couldn't load comments.</p>`; return; }
+  if(!data.length){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted)">No comments yet — be the first to ask something.</p>`; return; }
+  el.innerHTML = renderCommentTree(data);
+  el.querySelectorAll('[data-reply-toggle]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const parentId = btn.dataset.replyToggle;
+    const slot = document.getElementById(`replyFormSlot-${parentId}`);
+    if(!slot) return;
+    if(slot.innerHTML){ slot.innerHTML=''; return; } // toggle closed if already open
+    slot.innerHTML = `
+      <form class="reply-form" style="display:flex;gap:6px;margin-top:8px">
+        <input required maxlength="300" placeholder="Reply (letters only)" style="flex:1;border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;font-size:12.5px;color:var(--ink);background:var(--white)"/>
+        <button type="submit" class="btn-secondary" style="padding:7px 12px;font-size:12px">Reply</button>
+      </form>
+    `;
+    const replyInput = slot.querySelector('input');
+    attachLettersOnlyFilter(replyInput);
+    slot.querySelector('form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const content = replyInput.value.trim();
+      if(!content) return;
+      try{
+        await sb.from('comments').insert({ listing_id: listing.id, user_id: session.user.id, user_name: (profile && profile.full_name) || 'Student', content, parent_id: parentId });
+        if(listing.lister_id && listing.lister_id !== session.user.id){
+          await notifyUser(listing.lister_id, 'comment', `${(profile && profile.full_name) || 'A student'} replied to a comment on your listing "${listing.title}".`, listing.id);
+        }
+        await loadComments(listing);
+      }catch(err){ showToast('Could not post reply: ' + (err.message||'try again')); }
+    });
+  }));
+}
+function closeDetail(){ const ov = document.getElementById('overlay'); ov.classList.remove('open'); ov.classList.remove('center-modal'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeDetail(); });
+
+async function startRentPayment(listing){
+  if(!session){ openAuth('login'); showToast('Log in to pay rent and connect with the landlord.'); return; }
+  if(typeof PaystackPop === 'undefined'){ showToast('Payment service failed to load. Check your connection.'); return; }
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: session.user.email,
+    amount: Math.round(listing.price * 100), // kobo
+    currency: 'NGN',
+    ref: 'rl_' + Date.now() + '_' + Math.floor(Math.random()*1e6),
+    callback: function(response){
+      handleRentSuccess(listing, response.reference);
+    },
+    onClose: function(){
+      showToast('Payment cancelled.');
+    }
+  });
+  handler.openIframe();
+}
+async function handleRentSuccess(listing, ref){
+  // Note: for a production app, verify this reference server-side via Paystack's
+  // verify-transaction endpoint before trusting it. This prototype trusts the
+  // client-side callback, which is fine for a course demo but not for real money.
+  try{
+    const refCode = localStorage.getItem('rl_ref_code');
+    let affiliateId = null;
+    if(refCode){
+      const { data: aff } = await sb.from('profiles').select('id').eq('affiliate_code', refCode).maybeSingle();
+      // Block self-referral: not the renter themselves, and not the person who listed this room.
+      if(aff && aff.id !== session.user.id && aff.id !== listing.lister_id) affiliateId = aff.id;
+    }
+    const { landlord, affiliate, company } = computeSplit(listing.price, !!affiliateId);
+    await sb.from('transactions').insert({
+      listing_id: listing.id, renter_id: session.user.id, affiliate_id: affiliateId,
+      amount: listing.price, landlord_payout: landlord, affiliate_payout: affiliate, company_payout: company,
+      status: 'paid', paystack_ref: ref,
+    });
+    // Atomically take one room off the count — only flips the listing to
+    // 'rented' (and hides it from Browse) once the last room is gone.
+    const { data: remaining, error: decErr } = await sb.rpc('decrement_room', { listing_id_input: listing.id });
+    if(decErr) console.error('room decrement failed', decErr);
+    await fetchListings();
+    closeDetail();
+    if(remaining == null){
+      // Extremely rare: someone else took the last room in the seconds between
+      // this payment starting and finishing. Payment still succeeded and the
+      // transaction is recorded — this needs a manual look/refund from you.
+      showToast('Rent paid, but this room was just filled by someone else — we\'ll follow up with you directly.');
+    } else if(remaining > 0){
+      showToast(`Rent paid — landlord contact unlocked. ${remaining} room${remaining!==1?'s':''} still left on this listing.`);
+    } else {
+      showToast('Rent paid — landlord contact unlocked. Track your move-in in "My Rentals".');
+    }
+    view = 'dashboard'; renderAll();
+  }catch(err){
+    showToast('Payment succeeded but saving failed: ' + (err.message||'contact support'));
+  }
+}
+
+/* ============ Dashboard (renter) ============ */
+function progressBarHtml(status){
+  const steps = [
+    {key:'paid', label:'Rent Paid'},
+    {key:'movein', label:'Move In'},
+    {key:'confirmed', label:'Confirmed'},
+  ];
+  let activeIdx = 0;
+  if(status==='paid') activeIdx = 1; // step 1 done, step 2 (move in) active
+  if(status==='confirmed') activeIdx = 3; // all done
+  if(status==='disputed') activeIdx = 1;
+  return `
+    <div class="progress-wrap"><div class="progress-track">
+      ${steps.map((s,i)=>{
+        const done = i < activeIdx;
+        const active = i === activeIdx;
+        return `<div class="progress-step ${done?'done':''} ${active?'active':''}">
+          <div class="progress-line"></div>
+          <div class="progress-dot">${done?iconSvg('check','width="14" height="14"'):i+1}</div>
+          <div class="progress-label">${s.label}</div>
+        </div>`;
+      }).join('')}
+    </div></div>
+  `;
+}
+function renderMyListings(){
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">My listings</div>
+      <h1>Manage your posts</h1>
+      <p>Boost a listing to keep it on the first page of Browse for ${naira(BOOST_PRICE_PER_DAY)}/day, however long you like.</p>
+    </div>
+    <div id="myListingsWrap" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
+  `;
+  loadMyListings();
+}
+async function loadMyListings(){
+  await fetchMyListings();
+  const el = document.getElementById('myListingsWrap');
+  if(!el) return;
+  if(!myListings.length){
+    el.innerHTML = `<div class="empty">${iconSvg('home')}<h3>You haven't listed anything yet</h3><p>Head to "List a Room" to add your first one.</p></div>`;
+    return;
+  }
+  el.innerHTML = myListings.map(l=>{
+    const boosted = isBoosted(l);
+    const total = l.total_rooms || 1;
+    const avail = l.available_rooms != null ? l.available_rooms : total;
+    return `
+    <div class="rental-card">
+      <h3>${esc(l.title)}</h3>
+      <div class="sub">${esc(l.location)} · ${naira(l.price)}/room/yr · ${l.status==='rented' ? 'Fully rented' : `${avail} of ${total} rooms left`}</div>
+      ${boosted ? `
+        <div class="commission-note" style="margin-top:12px">${iconSvg('spark')}<span>Boosted — staying on the first page until ${new Date(l.boosted_until).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'})}.</span></div>
+        <div class="rental-actions"><button class="btn-secondary" data-boost="${l.id}" data-days="7">${iconSvg('spark','width="16" height="16"')}Extend boost by 7 days (${naira(BOOST_PRICE_PER_DAY*7)})</button></div>
+      ` : `
+        <div class="rental-actions">
+          <button class="btn-primary" data-boost="${l.id}" data-days="1">${iconSvg('spark','width="16" height="16"')}Boost 1 day (${naira(BOOST_PRICE_PER_DAY)})</button>
+          <button class="btn-secondary" data-boost="${l.id}" data-days="7">Boost 7 days (${naira(BOOST_PRICE_PER_DAY*7)})</button>
+        </div>
+      `}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-boost]').forEach(b=>b.addEventListener('click', ()=>{
+    const listing = myListings.find(x=>x.id===b.dataset.boost);
+    if(listing) startBoostPayment(listing, Number(b.dataset.days));
+  }));
+}
+function renderDashboard(){
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">My rentals</div>
+      <h1>Track your move-in</h1>
+      <p>Confirm once you've actually moved in — that's what releases payment to the landlord and referring student.</p>
+    </div>
+    <div id="rentalsList" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
+  `;
+  loadDashboardData();
+}
+async function loadDashboardData(){
+  await fetchMyTransactions();
+  const el = document.getElementById('rentalsList');
+  if(!el) return;
+  if(!myTransactions.length){
+    el.innerHTML = `<div class="empty">${iconSvg('home')}<h3>No rentals yet</h3><p>Once you pay rent on a listing, it'll show up here.</p></div>`;
+    return;
+  }
+  el.innerHTML = myTransactions.map(t=>{
+    const li = t.listings || {};
+    return `
+    <div class="rental-card">
+      <h3>${esc(li.title||'Listing')}</h3>
+      <div class="sub">${esc(li.location||'')} · ${naira(t.amount)}/yr</div>
+      ${progressBarHtml(t.status)}
+      ${t.status==='paid' ? `
+        <div class="rental-actions">
+          <button class="btn-primary" data-confirm="${t.id}">${iconSvg('check','width="16" height="16"')}I've moved in</button>
+          <button class="dispute-link" data-dispute="${t.id}">Didn't move in / raise a dispute</button>
+        </div>
+      ` : t.status==='confirmed' ? `
+        <div class="commission-note" style="margin-top:14px">${iconSvg('shield')}<span>Move-in confirmed. Landlord and affiliate payouts logged as pending transfer.</span></div>
+      ` : `
+        <div class="commission-note" style="margin-top:14px">${iconSvg('shield')}<span>Marked as disputed — RoomLink will follow up with you directly.</span></div>
+      `}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-confirm]').forEach(b=>b.addEventListener('click', ()=>confirmMoveIn(b.dataset.confirm)));
+  el.querySelectorAll('[data-dispute]').forEach(b=>b.addEventListener('click', ()=>disputeRental(b.dataset.dispute)));
+}
+async function confirmMoveIn(transactionId){
+  try{
+    await sb.from('transactions').update({ status:'confirmed', confirmed_at: new Date().toISOString() }).eq('id', transactionId);
+    showToast('Move-in confirmed. Payouts released to landlord and affiliate.');
+    await loadDashboardData();
+  }catch(err){ showToast('Could not confirm: ' + (err.message||'try again')); }
+}
+async function disputeRental(transactionId){
+  try{
+    await sb.from('transactions').update({ status:'disputed' }).eq('id', transactionId);
+    showToast('Dispute raised — RoomLink will reach out.');
+    await loadDashboardData();
+  }catch(err){ showToast('Could not raise dispute: ' + (err.message||'try again')); }
+}
+
+/* ============ Affiliate dashboard ============ */
+function renderAffiliate(){
+  const link = `${window.location.origin}${window.location.pathname}?ref=${profile ? profile.affiliate_code : ''}`;
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">Affiliate</div>
+      <h1>Your referral dashboard</h1>
+      <p>Share your link. Earn 5% of the rent whenever someone rents a room after clicking it.</p>
+    </div>
+    <div class="ref-box fade-in">
+      <div class="lbl">Your referral link</div>
+      <div class="ref-link-row"><code id="refLinkText">${esc(link)}</code>
+        <button class="icon-btn" id="copyRefBtn" style="background:rgba(255,255,255,0.15)">${iconSvg('copy')}</button>
+      </div>
+      <div class="ref-share-row">
+        <a href="https://wa.me/?text=${encodeURIComponent('Find your next off-campus room on RoomLink: ' + link)}" target="_blank" rel="noopener" class="btn-primary">Share on WhatsApp</a>
+      </div>
+    </div>
+    <div class="stat-grid fade-in" id="statGrid">
+      <div class="stat-card"><div class="lbl">Referrals</div><div class="val">—</div></div>
+      <div class="stat-card"><div class="lbl">Confirmed rentals</div><div class="val">—</div></div>
+      <div class="stat-card"><div class="lbl">Pending earnings</div><div class="val">—</div></div>
+    </div>
+    <div class="form-wrap fade-in">
+      <h3 style="font-size:16px;margin-bottom:14px">Payout details</h3>
+      <div id="bankSection"></div>
+      <div style="margin-top:10px">
+        <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
+      </div>
+    </div>
+  `;
+  document.getElementById('copyRefBtn').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(link).then(()=>showToast('Link copied.'));
+  });
+  renderBankSection();
+  loadAffiliateStats();
+}
+let editingBankDetails = false;
+function renderBankSection(){
+  const el = document.getElementById('bankSection');
+  if(!el) return;
+  const hasDetails = profile && profile.bank_name && profile.bank_account_name && profile.bank_account_number;
+  if(hasDetails && !editingBankDetails){
+    el.innerHTML = `
+      <div class="stat-grid" style="grid-template-columns:1fr">
+        <div class="stat-card" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Bank</span><strong style="font-size:14px">${esc(profile.bank_name)}</strong></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account name</span><strong style="font-size:14px">${esc(profile.bank_account_name)}</strong></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account number</span><strong style="font-size:14px">${esc(profile.bank_account_number)}</strong></div>
+        </div>
+      </div>
+      <button class="btn-secondary" id="editBankBtn" style="margin-top:12px">${iconSvg('reply','width="14" height="14"')}Edit details</button>
+    `;
+    document.getElementById('editBankBtn').addEventListener('click', ()=>{ editingBankDetails = true; renderBankSection(); });
+  } else {
+    el.innerHTML = `
+      <form id="bankForm">
+        <div class="field"><label>Bank name</label><input name="bankName" value="${esc(profile && profile.bank_name || '')}" placeholder="e.g. GTBank"/></div>
+        <div class="field-row">
+          <div class="field"><label>Account name</label><input name="acctName" value="${esc(profile && profile.bank_account_name || '')}" placeholder="Name on account"/></div>
+          <div class="field"><label>Account number</label><input name="acctNumber" value="${esc(profile && profile.bank_account_number || '')}" placeholder="10-digit number"/></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button type="submit" class="btn-secondary">Save details</button>
+          ${hasDetails ? `<button type="button" class="btn-text" id="cancelEditBank">Cancel</button>` : ''}
+        </div>
+      </form>
+    `;
+    const cancelBtn = document.getElementById('cancelEditBank');
+    if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingBankDetails = false; renderBankSection(); });
+    document.getElementById('bankForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try{
+        await sb.from('profiles').update({
+          bank_name: fd.get('bankName'), bank_account_name: fd.get('acctName'), bank_account_number: fd.get('acctNumber'),
+        }).eq('id', session.user.id);
+        profile.bank_name = fd.get('bankName');
+        profile.bank_account_name = fd.get('acctName');
+        profile.bank_account_number = fd.get('acctNumber');
+        editingBankDetails = false;
+        e.target.reset();
+        renderBankSection();
+        showSuccessPopup('Payment details added!', 'Your payout information has been saved successfully.');
+      }catch(err){ showToast('Could not save: ' + (err.message||'try again')); }
+    });
+  }
+}
+async function loadAffiliateStats(){
+  await fetchAffiliateStats();
+  const grid = document.getElementById('statGrid');
+  if(!grid || !affiliateStats) return;
+  grid.innerHTML = `
+    <div class="stat-card"><div class="lbl">Referrals</div><div class="val">${affiliateStats.count}</div></div>
+    <div class="stat-card"><div class="lbl">Confirmed rentals</div><div class="val">${affiliateStats.confirmedCount}</div></div>
+    <div class="stat-card"><div class="lbl">Pending earnings</div><div class="val">${naira(affiliateStats.pendingEarnings)}</div></div>
+  `;
+}
+
+/* ============ Commission explainer ============ */
+function renderCommission(){
+  mainEl.innerHTML = `
+    <div class="explain-wrap fade-in">
+      <div class="hero">
+        <div class="eyebrow">Monetization</div>
+        <h1>How RoomLink's payments work</h1>
+        <p>Full rent is paid to RoomLink upfront and held until the renter confirms move-in — then it's split and released.</p>
+      </div>
+      <div class="flow-row">
+        <div class="flow-card"><div class="icon-circle">${iconSvg('handshake')}</div><h4>Rent paid</h4><p>The renter pays the full year's rent to RoomLink via Paystack, and landlord contact unlocks.</p></div>
+        <div class="flow-arrow">${iconSvg('arrowRight','width="20" height="20"')}</div>
+        <div class="flow-card"><div class="icon-circle">${iconSvg('shield')}</div><h4>Move-in confirmed</h4><p>The renter taps "I've moved in" once they're actually settled — this is what triggers payout.</p></div>
+        <div class="flow-arrow">${iconSvg('arrowRight','width="20" height="20"')}</div>
+        <div class="flow-card"><div class="icon-circle">${iconSvg('users')}</div><h4>Split released</h4><p>RoomLink always keeps a flat 10%. Landlord gets 90% normally, or 85% when a referring student is attached — the referrer's 5% comes from that share.</p></div>
+      </div>
+      <div class="calc-box">
+        <h3>Try the calculator</h3>
+        <div class="sub">Drag to see how a year's rent splits</div>
+        <div class="calc-row">
+          <div class="calc-row-top"><label>Annual rent</label><div class="calc-amount" id="rentAmount">\u20a6150,000</div></div>
+          <input type="range" id="rentSlider" min="40000" max="10000000" step="10000" value="150000"/>
+        </div>
+        <div style="margin:14px 0 4px;display:flex;gap:8px;align-items:center">
+          <label style="font-size:12.5px;color:#B8BCC2;display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="calcHasAffiliate" style="accent-color:var(--lemon-b);width:15px;height:15px"/> This rental has a referring student
+          </label>
+        </div>
+        <div class="calc-split">
+          <div class="seg"><div class="lbl" id="landLbl">Landlord (90%)</div><div class="num" id="landOut">—</div></div>
+          <div class="seg"><div class="lbl" id="affLbl">Affiliate (5%)</div><div class="num" id="affOut">—</div></div>
+          <div class="seg"><div class="lbl">RoomLink (10%)</div><div class="num" id="compOut">—</div></div>
+        </div>
+      </div>
+      <div class="commission-note" style="margin-top:18px">${iconSvg('shield')}<span>RoomLink always keeps a flat 10%. When a rental has a referring student, their 5% is drawn from the landlord's share (90% → 85%) rather than RoomLink's cut.</span></div>
+    </div>
+  `;
+  const slider = document.getElementById('rentSlider');
+  const affCheck = document.getElementById('calcHasAffiliate');
+  function updateCalc(){
+    const rent = Number(slider.value);
+    const hasAff = affCheck.checked;
+    const { landlord, affiliate, company } = computeSplit(rent, hasAff);
+    document.getElementById('rentAmount').textContent = naira(rent);
+    document.getElementById('landOut').textContent = naira(landlord);
+    document.getElementById('affOut').textContent = naira(affiliate);
+    document.getElementById('compOut').textContent = naira(company);
+    document.getElementById('affLbl').textContent = hasAff ? 'Affiliate (5%)' : 'Affiliate (none)';
+    document.getElementById('landLbl').textContent = hasAff ? 'Landlord (85%)' : 'Landlord (90%)';
+  }
+  slider.addEventListener('input', updateCalc);
+  affCheck.addEventListener('change', updateCalc);
+  updateCalc();
+}
+
+/* ============ Init ============ */
+(async function init(){
+  applyTheme();
+  mainEl.innerHTML = `<div class="empty">${iconSvg('spark')}<h3>Loading RoomLink...</h3></div>`;
+  await refreshSession();
+  renderAccountButton();
+  await fetchNotifications();
+  renderNotifBtn();
+  await fetchListings();
+  renderAll();
+})();
+</script>
+</body>
+</html>
