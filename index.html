@@ -257,6 +257,81 @@
   [data-theme="dark"] .toast{background:var(--lemon-grad);color:var(--ink);}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+  /* ---- Social proof section ---- */
+  .proof-section{margin:56px 0 8px;}
+  .proof-heading{text-align:center;max-width:560px;margin:0 auto 32px;}
+  .proof-heading h2{font-size:26px;margin-bottom:10px;}
+  .proof-heading p{color:var(--muted);font-size:14px;line-height:1.6;}
+  .stat-grid-proof{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:52px;}
+  .stat-card-proof{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px 16px;text-align:center;transition:transform .2s ease, box-shadow .2s ease;}
+  .stat-card-proof:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+  .stat-card-proof .icon-circle{width:42px;height:42px;border-radius:12px;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+  .stat-card-proof .icon-circle svg{width:19px;height:19px;}
+  .stat-card-proof .stat-num{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-bottom:4px;}
+  .stat-card-proof .stat-lbl{font-size:12px;color:var(--muted);font-weight:600;}
+
+  .testimonials-heading{text-align:center;max-width:560px;margin:0 auto 26px;}
+  .testimonials-heading h2{font-size:24px;margin-bottom:8px;}
+  .testimonials-heading p{color:var(--muted);font-size:13.5px;}
+  .testimonial-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:4px 4px 16px;margin-bottom:8px;}
+  .testimonial-track::-webkit-scrollbar{display:none;}
+  .testimonial-card{scroll-snap-align:start;flex:0 0 82%;background:var(--glass-bg);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);border:1px solid var(--glass-border);border-radius:18px;padding:20px;transition:transform .2s ease;}
+  .testimonial-card:hover{transform:translateY(-3px);}
+  @media(min-width:760px){
+    .testimonial-track{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));overflow:visible;}
+    .testimonial-card{flex:none;}
+  }
+  .testimonial-stars{color:var(--lemon-b);font-size:14px;letter-spacing:2px;margin-bottom:10px;}
+  .testimonial-text{font-size:13.5px;line-height:1.6;color:var(--ink);margin-bottom:14px;}
+  .testimonial-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .testimonial-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;}
+  .testimonial-name .verified-tick{width:14px;height:14px;border-radius:50%;background:var(--lemon-grad);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .testimonial-name .verified-tick svg{width:8px;height:8px;color:var(--ink);}
+  .testimonial-sub{font-size:11px;color:var(--muted);}
+
+  .why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:48px 0;}
+  .why-card{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px 20px;transition:transform .2s ease, box-shadow .2s ease;}
+  .why-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+  .why-card .icon-circle{width:44px;height:44px;border-radius:12px;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .why-card .icon-circle svg{width:20px;height:20px;}
+  .why-card h4{font-size:14.5px;margin-bottom:6px;}
+  .why-card p{font-size:12.5px;color:var(--muted);line-height:1.5;}
+
+  .cta-banner{background:var(--lemon-grad);border-radius:24px;padding:44px 28px;text-align:center;margin:48px 0;position:relative;overflow:hidden;}
+  .cta-banner h2{font-size:24px;color:var(--ink);margin-bottom:10px;}
+  .cta-banner p{color:rgba(20,23,26,0.75);font-size:14px;margin-bottom:22px;max-width:420px;margin-left:auto;margin-right:auto;}
+  .cta-banner-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .cta-banner-btns button{background:var(--ink);color:#fff;padding:13px 24px;border-radius:12px;font-weight:700;font-size:14px;transition:transform .15s ease;}
+  .cta-banner-btns button:hover{transform:translateY(-2px);}
+  .cta-banner-btns button.ghost{background:rgba(255,255,255,0.35);backdrop-filter:blur(8px);color:var(--ink);border:1px solid rgba(20,23,26,0.15);}
+
+  /* ---- Footer ---- */
+  footer.premium-footer{background:var(--card);border-top:1px solid var(--line);margin-top:40px;padding:44px 20px 0;}
+  .footer-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1.3fr;gap:28px;padding-bottom:32px;}
+  @media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.footer-grid{grid-template-columns:1fr;}}
+  .footer-col h5{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:14px;font-weight:700;}
+  .footer-col p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
+  .footer-col ul{list-style:none;margin:0;padding:0;}
+  .footer-col li{margin-bottom:10px;}
+  .footer-col a, .footer-col button{font-size:12.5px;color:var(--muted);transition:color .15s ease;}
+  .footer-col a:hover, .footer-col button:hover{color:var(--ink);}
+  .footer-trust{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  .footer-trust span{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);}
+  .footer-trust svg{width:14px;height:14px;color:var(--lemon-b);flex-shrink:0;}
+  .footer-social{display:flex;gap:8px;margin-bottom:16px;}
+  .footer-social button{width:34px;height:34px;border-radius:50%;background:var(--white);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .15s ease;}
+  .footer-social button:hover{color:var(--ink);border-color:var(--lemon-b);}
+  .footer-social svg{width:15px;height:15px;}
+  .newsletter-form{display:flex;gap:8px;margin-top:6px;}
+  .newsletter-form input{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12.5px;background:var(--white);color:var(--ink);min-width:0;}
+  .newsletter-form button{background:var(--lemon-grad);color:var(--ink);border-radius:10px;padding:9px 14px;font-weight:700;font-size:12.5px;flex-shrink:0;}
+  .newsletter-hint{font-size:11px;color:var(--muted);margin-top:8px;}
+  .footer-bottom{border-top:1px solid var(--line);padding:18px 0;max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+  .footer-bottom p{font-size:11.5px;color:var(--muted);margin:0;}
+  .footer-bottom-links{display:flex;gap:16px;}
+  .footer-bottom-links button{font-size:11.5px;color:var(--muted);}
+  .footer-bottom-links button:hover{color:var(--ink);}
   footer.note{text-align:center;padding:18px;font-size:11.5px;color:var(--muted);}
   .lightbox{position:fixed;inset:0;background:rgba(6,7,8,0.97);z-index:90;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .25s ease;}
   .lightbox.open{opacity:1;pointer-events:auto;}
@@ -384,7 +459,73 @@
   </div>
   <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
-  <footer class="note">© RoomLink 2025 · Payment secured with Paystack</footer>
+  <footer class="premium-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="brand" style="margin-bottom:12px">
+          <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/></svg></div>
+          <div class="brand-name">RoomLink</div>
+        </div>
+        <p>RoomLink connects students with off-campus rooms listed by fellow students, with rent held safely until move-in is confirmed.</p>
+        <div class="footer-trust">
+          <span>${iconSvg('shield')}Rent protection on every booking</span>
+          <span>${iconSvg('lock')}Secure payments via Paystack</span>
+          <span>${iconSvg('spark')}Built by and for students</span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h5>Quick Links</h5>
+        <ul>
+          <li><button data-footer-nav="browse">Find a Room</button></li>
+          <li><button data-footer-nav="browse">Browse Apartments</button></li>
+          <li><button data-footer-nav="list">Post a Property</button></li>
+          <li><button data-footer-nav="commission">How Fees Work</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul>
+          <li><button data-footer-info="about">About Us</button></li>
+          <li><button data-footer-info="contact">Contact</button></li>
+          <li><button data-footer-info="help">Help Center</button></li>
+          <li><button data-footer-info="faq">FAQs</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Legal</h5>
+        <ul>
+          <li><button data-footer-info="privacy">Privacy Policy</button></li>
+          <li><button id="footerTermsBtn">Terms &amp; Conditions</button></li>
+          <li><button data-footer-info="cookies">Cookie Policy</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Stay Connected</h5>
+        <div class="footer-social">
+          <button class="footer-social-btn" title="Facebook">${iconSvg('facebook')}</button>
+          <button class="footer-social-btn" title="Instagram">${iconSvg('instagram')}</button>
+          <button class="footer-social-btn" title="X">${iconSvg('xTwitter')}</button>
+          <button class="footer-social-btn" title="LinkedIn">${iconSvg('linkedin')}</button>
+        </div>
+        <form id="newsletterForm" class="newsletter-form">
+          <input type="email" id="newsletterEmail" required placeholder="you@school.edu.ng"/>
+          <button type="submit">${iconSvg('mail','width="14" height="14"')}</button>
+        </form>
+        <div class="newsletter-hint">Get notified when new verified apartments become available.</div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>
+        <p>© 2026 RoomLink. All rights reserved.</p>
+        <p style="margin-top:3px">Made to simplify apartment hunting.</p>
+      </div>
+      <div class="footer-bottom-links">
+        <button data-footer-info="privacy">Privacy</button>
+        <button id="footerTermsBtn2">Terms</button>
+        <button data-footer-info="help">Support</button>
+      </div>
+    </div>
+  </footer>
 </div>
 
 <script>
@@ -420,6 +561,13 @@ const ICONS = {
   heart:'<path d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
   heartFill:'<path fill="currentColor" d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
   phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  star:'<path d="M12 2.8 14.9 9l6.8.6-5.2 4.5 1.6 6.6L12 17.3 6 20.7l1.6-6.6L2.4 9.6 9.1 9Z"/>',
+  starFill:'<path fill="currentColor" d="M12 2.8 14.9 9l6.8.6-5.2 4.5 1.6 6.6L12 17.3 6 20.7l1.6-6.6L2.4 9.6 9.1 9Z"/>',
+  facebook:'<path d="M14 9h3V6h-3a3 3 0 0 0-3 3v2H8v3h3v6h3v-6h3l1-3h-4V9a1 1 0 0 1 1-1Z"/>',
+  instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17.2" cy="6.8" r="1"/>',
+  xTwitter:'<path d="m4 4 16 16M20 4 4 20"/>',
+  linkedin:'<rect x="3" y="3" width="18" height="18" rx="3"/><line x1="7.5" y1="9.5" x2="7.5" y2="16.5"/><circle cx="7.5" cy="6.5" r="1"/><path d="M11.5 16.5v-4a2.5 2.5 0 0 1 5 0v4M11.5 10.5v6"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.6 6.6A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
@@ -771,6 +919,87 @@ function showNewPasswordPopup(){
     }catch(err){
       msgEl.innerHTML = `<div class="auth-error">${esc(err.message || 'Could not update password. Try again.')}</div>`;
       submitBtn.disabled = false;
+    }
+  });
+}
+const FOOTER_INFO = {
+  about: {
+    title: 'About RoomLink',
+    body: `<p>RoomLink is a peer-to-peer platform built to solve a real problem: finding a decent off-campus room shouldn't mean relying on word-of-mouth, agent fees, or hoping a listing photo matches reality.</p>
+      <p>Students list rooms on behalf of landlords they know, renters pay through RoomLink with their money held safely until they've actually moved in, and everyone — landlord, renter, and the student who made the connection — gets paid fairly and transparently.</p>
+      <p>RoomLink started as a course project (COM 125) and is being built out into something students can genuinely rely on.</p>`
+  },
+  contact: {
+    title: 'Contact Us',
+    body: `<p>The fastest way to reach RoomLink right now is through the account you're logged in with — any issue you report is tied to your account, which helps us sort it out faster.</p>
+      <p>For anything urgent involving a payment or a dispute, use the "Raise a dispute" option on the relevant rental in your My Rentals dashboard so it's logged and tracked properly.</p>`
+  },
+  help: {
+    title: 'Help Center',
+    body: `<p><strong style="color:var(--ink)">Paid but haven't moved in yet?</strong> Your money is held safely — it isn't released to the landlord until you confirm move-in yourself.</p>
+      <p><strong style="color:var(--ink)">Room isn't what was described?</strong> Use "Raise a dispute" on that rental instead of confirming move-in.</p>
+      <p><strong style="color:var(--ink)">Listing a room?</strong> Add clear photos and an accurate amenities list — it's what renters use to decide, and accuracy is on the person listing it.</p>
+      <p><strong style="color:var(--ink)">Didn't get a verification email?</strong> Check spam, or use "Resend verification link" on the login screen.</p>`
+  },
+  faq: {
+    title: 'Frequently Asked Questions',
+    body: `<p><strong style="color:var(--ink)">How does rent protection actually work?</strong><br/>You pay the full year's rent to RoomLink, not directly to the landlord. Funds only move to the landlord once you personally confirm you've moved in.</p>
+      <p><strong style="color:var(--ink)">What does RoomLink take?</strong><br/>A flat 10% of rent. If you were referred by another student's link, 5% of that goes to them and RoomLink keeps 5%; otherwise RoomLink keeps the full 10%.</p>
+      <p><strong style="color:var(--ink)">Are listings verified by RoomLink staff?</strong><br/>Not yet — listings are posted directly by students on behalf of landlords. Rely on photos, amenities, comments from other students, and your own judgement.</p>
+      <p><strong style="color:var(--ink)">Can I get a refund?</strong><br/>If a move-in falls through, use "Raise a dispute" instead of confirming — this flags it for manual review rather than releasing funds.</p>`
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    body: `<p>RoomLink collects the information you provide directly: name, email, phone number, and — if you opt into payouts — bank account details for withdrawal purposes.</p>
+      <p>Data is stored via Supabase (a third-party database provider) and payments are processed via Paystack (a third-party payment processor). RoomLink does not sell your data to advertisers or third parties.</p>
+      <p>Your bank details are only ever used to identify who a manual payout should go to, and are visible only to you and to RoomLink for that purpose.</p>
+      <p>Listing photos and profile pictures you upload are stored in public storage buckets, meaning their direct links are accessible to anyone with the link — don't upload anything you wouldn't want publicly viewable.</p>`
+  },
+  cookies: {
+    title: 'Cookie Policy',
+    body: `<p>RoomLink uses your browser's local storage to keep you logged in and to remember things like a referral code or your dark mode preference. It does not use third-party advertising or tracking cookies.</p>
+      <p>Clearing your browser's site data will log you out and reset these preferences.</p>`
+  },
+};
+function showInfoSheet(key){
+  const info = FOOTER_INFO[key];
+  if(!info) return;
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:16px">${esc(info.title)}</h2>
+      <div style="font-size:13px;line-height:1.7;color:var(--muted);max-height:60vh;overflow-y:auto;padding-right:4px">${info.body}</div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+}
+function wireFooter(){
+  document.querySelectorAll('[data-footer-nav]').forEach(b=>b.addEventListener('click', ()=>{
+    const target = b.dataset.footerNav;
+    if(target==='list' && !session){ openAuth('login'); return; }
+    view = target; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  }));
+  document.querySelectorAll('[data-footer-info]').forEach(b=>b.addEventListener('click', ()=>showInfoSheet(b.dataset.footerInfo)));
+  const t1 = document.getElementById('footerTermsBtn');
+  const t2 = document.getElementById('footerTermsBtn2');
+  if(t1) t1.addEventListener('click', showTermsSheet);
+  if(t2) t2.addEventListener('click', showTermsSheet);
+  document.querySelectorAll('.footer-social-btn').forEach(b=>b.addEventListener('click', ()=>{
+    showToast("RoomLink's social pages are coming soon.");
+  }));
+  const newsletterForm = document.getElementById('newsletterForm');
+  if(newsletterForm) newsletterForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const emailInput = document.getElementById('newsletterEmail');
+    try{
+      await sb.from('newsletter_subscribers').insert({ email: emailInput.value.trim() });
+      showToast("Subscribed — we'll email you when new rooms go up.");
+      emailInput.value = '';
+    }catch(err){
+      if(err.message && err.message.includes('duplicate')) showToast("That email's already subscribed.");
+      else showToast('Could not subscribe: ' + (err.message||'try again'));
     }
   });
 }
@@ -1167,6 +1396,7 @@ function renderBrowse(){
       <h1>Find your next room off-campus</h1>
       <p>Browse rooms listed by fellow students. Rent is held safely until you confirm you've moved in — the landlord and referring student get paid only then.</p>
     </div>
+    <div id="proofSection"></div>
     <div class="browse-layout">
       <aside class="filters glass fade-in">
         <h4>Filter results</h4>
@@ -1214,6 +1444,127 @@ function renderBrowse(){
     const listing = listings.find(x=>x.id===b.dataset.like);
     if(listing) toggleLike(listing);
   }));
+  loadProofSection();
+}
+
+/* ============ Social proof section (stats + testimonials + why + CTA) ============ */
+let proofSectionHtml = null;
+async function fetchPlatformStats(){
+  try{
+    const { data, error } = await sb.rpc('platform_stats');
+    if(error) throw error;
+    return (data && data[0]) || { total_users:0, total_listings:0, total_confirmed_rentals:0, avg_rating:0, total_reviews:0 };
+  }catch(err){ console.error('platform_stats failed', err); return { total_users:0, total_listings:0, total_confirmed_rentals:0, avg_rating:0, total_reviews:0 }; }
+}
+async function fetchReviews(){
+  const { data, error } = await sb.from('reviews').select('*, listings(location), profiles(full_name)').order('created_at',{ascending:false}).limit(9);
+  if(error){ console.error(error); return []; }
+  return data;
+}
+async function loadProofSection(){
+  const el = document.getElementById('proofSection');
+  if(!el) return;
+  if(proofSectionHtml){ el.innerHTML = proofSectionHtml; wireProofSection(); return; }
+  const [stats, reviews] = await Promise.all([fetchPlatformStats(), fetchReviews()]);
+  proofSectionHtml = buildProofSectionHtml(stats, reviews);
+  el.innerHTML = proofSectionHtml;
+  wireProofSection();
+}
+function starRow(rating){
+  return Array.from({length:5}, (_,i)=> i < rating ? iconSvg('starFill','width="14" height="14"') : iconSvg('star','width="14" height="14"')).join('');
+}
+function buildProofSectionHtml(stats, reviews){
+  const statCards = [
+    { num: stats.total_listings, lbl: 'Rooms Listed', icon:'home' },
+    { num: stats.total_users, lbl: 'Registered Users', icon:'users' },
+    { num: stats.total_confirmed_rentals, lbl: 'Successful Rentals', icon:'handshake' },
+    { num: stats.total_reviews > 0 ? stats.avg_rating : null, lbl: stats.total_reviews > 0 ? 'Average Rating' : 'New Platform', icon:'star', suffix: stats.total_reviews > 0 ? '/5' : '' },
+  ];
+  const testimonialsHtml = reviews.length ? reviews.map(r=>`
+    <div class="testimonial-card">
+      <div class="testimonial-stars">${starRow(r.rating)}</div>
+      <p class="testimonial-text">"${esc(r.review_text)}"</p>
+      <div class="testimonial-meta">
+        <div>
+          <div class="testimonial-name">${esc((r.profiles && r.profiles.full_name || 'A student').split(' ')[0])} ${esc((r.profiles && r.profiles.full_name || '').split(' ')[1] ? (r.profiles.full_name.split(' ')[1].charAt(0) + '.') : '')} <span class="verified-tick">${iconSvg('check')}</span></div>
+          <div class="testimonial-sub">Verified Tenant${r.listings && r.listings.location ? ' · ' + esc(r.listings.location) : ''}</div>
+        </div>
+      </div>
+    </div>
+  `).join('') : `
+    <div class="testimonial-card" style="flex:1 1 100%;text-align:center;padding:32px 20px">
+      <p class="testimonial-text" style="margin-bottom:0">No reviews yet — RoomLink is just getting started. Reviews appear here automatically once students confirm real move-ins.</p>
+    </div>
+  `;
+  return `
+    <section class="proof-section">
+      <div class="proof-heading">
+        <h2>Trusted by Apartment Seekers</h2>
+        <p>RoomLink helps students discover rooms through a secure, transparent rental experience — every number below is real, pulled live from the platform.</p>
+      </div>
+      <div class="stat-grid-proof">
+        ${statCards.map(s=>`
+          <div class="stat-card-proof">
+            <div class="icon-circle">${iconSvg(s.icon)}</div>
+            <div class="stat-num" data-countup="${s.num==null ? '' : s.num}" data-suffix="${s.suffix||''}">${s.num==null ? '—' : '0'}${s.suffix||''}</div>
+            <div class="stat-lbl">${s.lbl}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="testimonials-heading">
+        <h2>What Our Users Are Saying</h2>
+        <p>Real experiences from students who found rooms through RoomLink.</p>
+      </div>
+      <div class="testimonial-track">${testimonialsHtml}</div>
+
+      <div class="why-grid">
+        <div class="why-card"><div class="icon-circle">${iconSvg('shield')}</div><h4>Rent Protection</h4><p>Your payment is held safely and only released to the landlord once you personally confirm you've moved in.</p></div>
+        <div class="why-card"><div class="icon-circle">${iconSvg('phone')}</div><h4>Direct Landlord Contact</h4><p>Once you pay, you get the landlord's number directly — no middlemen, no waiting around.</p></div>
+        <div class="why-card"><div class="icon-circle">${iconSvg('search')}</div><h4>Fast, Filtered Search</h4><p>Filter by location, room type, and budget to find a match in seconds, not days.</p></div>
+        <div class="why-card"><div class="icon-circle">${iconSvg('percent')}</div><h4>Fair, Transparent Fees</h4><p>A flat 10% commission, shown upfront on every listing — no hidden charges.</p></div>
+      </div>
+
+      <div class="cta-banner">
+        <h2>Ready to Find Your Next Room?</h2>
+        <p>Browse verified peer listings and move in with confidence — your rent stays protected until you say so.</p>
+        <div class="cta-banner-btns">
+          <button id="ctaFindRoom">Find a Room</button>
+          <button class="ghost" id="ctaPostRoom">Post a Property</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+function wireProofSection(){
+  const findBtn = document.getElementById('ctaFindRoom');
+  const postBtn = document.getElementById('ctaPostRoom');
+  if(findBtn) findBtn.addEventListener('click', ()=>{ document.querySelector('.browse-layout').scrollIntoView({behavior:'smooth'}); });
+  if(postBtn) postBtn.addEventListener('click', ()=>{
+    if(!session){ openAuth('login'); return; }
+    view='list'; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+  // Count-up animation, triggered once each stat card scrolls into view
+  const nums = document.querySelectorAll('[data-countup]');
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      const el = entry.target;
+      const target = Number(el.dataset.countup);
+      const suffix = el.dataset.suffix || '';
+      if(!el.dataset.countup || isNaN(target)){ observer.unobserve(el); return; }
+      let current = 0;
+      const steps = 30;
+      const increment = target / steps;
+      const isDecimal = target % 1 !== 0;
+      const timer = setInterval(()=>{
+        current += increment;
+        if(current >= target){ current = target; clearInterval(timer); }
+        el.textContent = (isDecimal ? current.toFixed(1) : Math.round(current)) + suffix;
+      }, 30);
+      observer.unobserve(el);
+    });
+  }, { threshold:0.4 });
+  nums.forEach(n=>observer.observe(n));
 }
 function listingCard(l){
   const cover = (l.photo_urls && l.photo_urls[0]) || null;
@@ -1708,8 +2059,15 @@ async function loadDashboardData(){
     el.innerHTML = `<div class="empty">${iconSvg('home')}<h3>No rentals yet</h3><p>Once you pay rent on a listing, it'll show up here.</p></div>`;
     return;
   }
+  const confirmedIds = myTransactions.filter(t=>t.status==='confirmed').map(t=>t.id);
+  let reviewedIds = new Set();
+  if(confirmedIds.length){
+    const { data: existingReviews } = await sb.from('reviews').select('transaction_id').in('transaction_id', confirmedIds);
+    if(existingReviews) reviewedIds = new Set(existingReviews.map(r=>r.transaction_id));
+  }
   el.innerHTML = myTransactions.map(t=>{
     const li = t.listings || {};
+    const alreadyReviewed = reviewedIds.has(t.id);
     return `
     <div class="rental-card">
       <h3>${esc(li.title||'Listing')}</h3>
@@ -1722,6 +2080,7 @@ async function loadDashboardData(){
         </div>
       ` : t.status==='confirmed' ? `
         <div class="commission-note" style="margin-top:14px">${iconSvg('shield')}<span>Move-in confirmed. Landlord and affiliate payouts logged as pending transfer.</span></div>
+        ${alreadyReviewed ? `<p style="font-size:12px;color:var(--muted);margin-top:10px">${iconSvg('check','width="12" height="12" style="vertical-align:-1px"')} Thanks — you've already left a review for this rental.</p>` : `<div id="reviewSlot-${t.id}" style="margin-top:14px"></div>`}
       ` : `
         <div class="commission-note" style="margin-top:14px">${iconSvg('shield')}<span>Marked as disputed — RoomLink will follow up with you directly.</span></div>
       `}
@@ -1729,6 +2088,45 @@ async function loadDashboardData(){
   }).join('');
   el.querySelectorAll('[data-confirm]').forEach(b=>b.addEventListener('click', ()=>confirmMoveIn(b.dataset.confirm)));
   el.querySelectorAll('[data-dispute]').forEach(b=>b.addEventListener('click', ()=>disputeRental(b.dataset.dispute)));
+  myTransactions.forEach(t=>{
+    if(t.status==='confirmed' && !reviewedIds.has(t.id)) renderReviewPrompt(t);
+  });
+}
+function renderReviewPrompt(transaction){
+  const slot = document.getElementById(`reviewSlot-${transaction.id}`);
+  if(!slot) return;
+  slot.innerHTML = `
+    <button class="btn-secondary" id="openReview-${transaction.id}">${iconSvg('star','width="14" height="14"')}Leave a review</button>
+  `;
+  document.getElementById(`openReview-${transaction.id}`).addEventListener('click', ()=>{
+    let selectedRating = 5;
+    slot.innerHTML = `
+      <div style="background:var(--card);border-radius:14px;padding:14px">
+        <div class="star-picker" style="display:flex;gap:6px;margin-bottom:10px" id="starPicker-${transaction.id}"></div>
+        <textarea id="reviewText-${transaction.id}" maxlength="400" placeholder="How was your experience renting through RoomLink?" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--white);min-height:70px;resize:vertical"></textarea>
+        <button class="btn-primary" id="submitReview-${transaction.id}" style="margin-top:10px">Submit review</button>
+      </div>
+    `;
+    const starPicker = document.getElementById(`starPicker-${transaction.id}`);
+    function renderStars(){
+      starPicker.innerHTML = Array.from({length:5}, (_,i)=>`<button type="button" data-star="${i+1}" style="color:var(--lemon-b)">${iconSvg(i < selectedRating ? 'starFill' : 'star','width="22" height="22"')}</button>`).join('');
+      starPicker.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click', ()=>{ selectedRating = Number(b.dataset.star); renderStars(); }));
+    }
+    renderStars();
+    document.getElementById(`submitReview-${transaction.id}`).addEventListener('click', async ()=>{
+      const text = document.getElementById(`reviewText-${transaction.id}`).value.trim();
+      if(!text){ showToast('Add a few words about your experience first.'); return; }
+      try{
+        await sb.from('reviews').insert({
+          transaction_id: transaction.id, listing_id: transaction.listing_id, renter_id: session.user.id,
+          rating: selectedRating, review_text: text,
+        });
+        proofSectionHtml = null; // force the homepage stats/testimonials to refresh with this new review
+        slot.innerHTML = `<p style="font-size:12px;color:var(--muted)">${iconSvg('check','width="12" height="12" style="vertical-align:-1px"')} Thanks for your review!</p>`;
+        showToast('Review submitted — thank you!');
+      }catch(err){ showToast('Could not submit review: ' + (err.message||'try again')); }
+    });
+  });
 }
 async function confirmMoveIn(transactionId){
   try{
@@ -1903,6 +2301,7 @@ function renderCommission(){
 (async function init(){
   applyTheme();
   mainEl.innerHTML = `<div class="empty">${iconSvg('spark')}<h3>Loading RoomLink...</h3></div>`;
+  wireFooter();
   await refreshSession();
   renderAccountButton();
   await fetchNotifications();
