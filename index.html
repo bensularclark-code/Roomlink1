@@ -258,6 +258,16 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   footer.note{text-align:center;padding:18px;font-size:11.5px;color:var(--muted);}
+  .lightbox{position:fixed;inset:0;background:rgba(6,7,8,0.97);z-index:90;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  .lightbox.open{opacity:1;pointer-events:auto;}
+  .lightbox-close{position:absolute;top:16px;right:16px;z-index:2;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.12);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
+  .lightbox-track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+  .lightbox-track::-webkit-scrollbar{display:none;}
+  .lightbox-slide{flex:0 0 100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:0 16px;}
+  .lightbox-slide img{max-width:100%;max-height:82vh;object-fit:contain;border-radius:10px;}
+  .lightbox-dots{display:flex;justify-content:center;gap:7px;padding:16px;}
+  .lightbox-dots .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.3);transition:background .2s ease;}
+  .lightbox-dots .dot.active{background:var(--lemon-b);}
 
   /* Progress bar */
   .progress-wrap{margin:18px 0 8px;}
@@ -367,6 +377,11 @@
   <main id="main"></main>
 
   <div class="toast" id="toast"></div>
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <div class="lightbox-track" id="lightboxTrack"></div>
+    <div class="lightbox-dots" id="lightboxDots"></div>
+  </div>
   <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
   <footer class="note">© RoomLink 2025 · Payment secured with Paystack</footer>
@@ -404,6 +419,7 @@ const ICONS = {
   reply:'<polyline points="9 10 4 15 9 20"/><path d="M20 4v6a4 4 0 0 1-4 4H4"/>',
   heart:'<path d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
   heartFill:'<path fill="currentColor" d="M12 20.5s-7.5-4.6-10-9.3C.4 8 2 4.5 5.5 4c2-.3 3.8.7 6.5 3.3C14.7 4.7 16.5 3.7 18.5 4c3.5.5 5.1 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"/>',
+  phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.6 6.6A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
@@ -579,15 +595,16 @@ function passwordChecks(pw){
     special: /[^A-Za-z0-9]/.test(pw),
   };
 }
-function updatePasswordStrength(pw){
+function updatePasswordStrength(pw, prefix){
+  prefix = prefix || 'pw';
   const checks = passwordChecks(pw);
   Object.entries(checks).forEach(([key, met])=>{
     const row = document.querySelector(`.pw-req[data-req="${key}"]`);
     if(row) row.classList.toggle('met', met);
   });
   const metCount = Object.values(checks).filter(Boolean).length;
-  const fill = document.getElementById('pwFill');
-  const label = document.getElementById('pwLabel');
+  const fill = document.getElementById(prefix + 'Fill');
+  const label = document.getElementById(prefix + 'Label');
   if(!fill || !label) return;
   const pct = (metCount/5)*100;
   fill.style.width = pct + '%';
@@ -633,6 +650,38 @@ function showSuccessPopup(title, message, onClose){
   });
 }
 
+function showRentPaidPopup(listing, remaining){
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  overlay.classList.add('center-modal');
+  const remainingNote = remaining > 0
+    ? `${remaining} room${remaining!==1?'s':''} still left on this listing.`
+    : `That was the last room — it's now off Browse.`;
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+      </div>
+      <h2>Rent paid!</h2>
+      <p>Your payment is confirmed and held safely with RoomLink. ${remainingNote}</p>
+      <div class="landlord-box" style="width:100%;margin-top:18px;text-align:left">
+        <div class="label">Landlord contact</div>
+        <div class="landlord-revealed">
+          <div class="av">${esc((listing.landlord_name||'L').charAt(0))}</div>
+          <div><strong>${esc(listing.landlord_name)}</strong><span>${esc(listing.landlord_phone)}</span></div>
+        </div>
+      </div>
+      <a href="tel:${esc(listing.landlord_phone)}" class="btn-primary btn-full" style="margin-top:16px">${iconSvg('phone','width="16" height="16"')}Call Landlord</a>
+      <button class="btn-text" id="rentPaidContinue" style="margin-top:14px">Continue to My Rentals</button>
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('rentPaidContinue').addEventListener('click', ()=>{
+    closeDetail();
+    view = 'dashboard'; renderAll();
+  });
+}
+
 function generateAffiliateCode(){
   return Array.from({length:8}, ()=> '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*36)]).join('');
 }
@@ -663,6 +712,93 @@ function showAffiliatePromo(){
   overlay.classList.add('open');
   document.getElementById('becomeAffiliateBtn').addEventListener('click', becomeAffiliate);
   document.getElementById('affiliatePromoCancel').addEventListener('click', closeDetail);
+}
+function showNewPasswordPopup(){
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  overlay.classList.remove('center-modal'); // this one behaves like a normal bottom sheet / centered on desktop
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <h2 style="margin-bottom:4px">Set a new password</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">You're resetting your RoomLink password. Choose a new one below.</p>
+      <div id="newPwMsg"></div>
+      <form id="newPasswordForm">
+        <div class="field">
+          <label>New password</label>
+          <div style="position:relative">
+            <input id="newPasswordInput" required minlength="8" placeholder="Create a strong password" style="padding-right:42px"/>
+            <button type="button" class="pw-toggle" id="toggleNewPw">${iconSvg('eye')}</button>
+          </div>
+          <div class="pw-strength-track"><div class="pw-strength-fill" id="newPwFill"></div></div>
+          <div class="pw-strength-label" id="newPwLabel">Password strength</div>
+          <div class="pw-checklist" id="newPwChecklist">
+            <div class="pw-req" data-req="len"><span class="dot">${iconSvg('check')}</span>8+ characters</div>
+            <div class="pw-req" data-req="upper"><span class="dot">${iconSvg('check')}</span>Uppercase letter</div>
+            <div class="pw-req" data-req="lower"><span class="dot">${iconSvg('check')}</span>Lowercase letter</div>
+            <div class="pw-req" data-req="num"><span class="dot">${iconSvg('check')}</span>A number</div>
+            <div class="pw-req" data-req="special"><span class="dot">${iconSvg('check')}</span>Special character</div>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="newPwSubmit" style="margin-top:6px">Set new password</button>
+      </form>
+    </div>
+  `;
+  overlay.classList.add('open');
+  const pwInput = document.getElementById('newPasswordInput');
+  const toggleBtn = document.getElementById('toggleNewPw');
+  toggleBtn.addEventListener('click', ()=>{
+    const isHidden = pwInput.type === 'password' || !pwInput.type;
+    pwInput.type = isHidden ? 'text' : 'password';
+    toggleBtn.innerHTML = iconSvg(isHidden ? 'eyeOff' : 'eye');
+  });
+  pwInput.type = 'password';
+  pwInput.addEventListener('input', ()=>updatePasswordStrength(pwInput.value, 'newPw'));
+  document.getElementById('newPasswordForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const msgEl = document.getElementById('newPwMsg');
+    const submitBtn = document.getElementById('newPwSubmit');
+    const checks = passwordChecks(pwInput.value);
+    if(!Object.values(checks).every(Boolean)){
+      msgEl.innerHTML = `<div class="auth-error">Your password doesn't meet all the requirements yet.</div>`;
+      return;
+    }
+    submitBtn.disabled = true;
+    try{
+      const { error } = await sb.auth.updateUser({ password: pwInput.value });
+      if(error) throw error;
+      closeDetail();
+      showSuccessPopup('Password updated!', 'You can now use your new password to log in.');
+    }catch(err){
+      msgEl.innerHTML = `<div class="auth-error">${esc(err.message || 'Could not update password. Try again.')}</div>`;
+      submitBtn.disabled = false;
+    }
+  });
+}
+function showTermsSheet(){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeTerms" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:16px">Terms &amp; Conditions</h2>
+      <div style="font-size:12.5px;line-height:1.7;color:var(--muted);max-height:55vh;overflow-y:auto;padding-right:4px">
+        <p><strong style="color:var(--ink)">1. What RoomLink is.</strong> RoomLink is a peer-to-peer platform connecting Nigerian university students with off-campus accommodation listed by other students on behalf of landlords. RoomLink does not own, manage, or inspect any property listed on the platform.</p>
+        <p><strong style="color:var(--ink)">2. Eligibility.</strong> You must be a student or otherwise capable of entering a binding agreement to use RoomLink. Accounts are personal and may not be shared.</p>
+        <p><strong style="color:var(--ink)">3. Listings.</strong> Listings are created by students ("Listers") on behalf of landlords. RoomLink does not verify the accuracy of listing details, photos, or landlord information, and is not responsible for discrepancies between a listing and the actual property. Listers are responsible for the accuracy of what they post.</p>
+        <p><strong style="color:var(--ink)">4. Payments and rent protection.</strong> Rent is paid in full to RoomLink via Paystack and held until the renter confirms move-in. Landlord contact details are shared with the renter immediately upon payment. Funds are only released for payout once move-in is confirmed by the renter.</p>
+        <p><strong style="color:var(--ink)">5. Commission.</strong> RoomLink retains a flat 10% commission on every rent payment. Where a rental is attributed to a referring student (affiliate), that student earns 5% and the landlord's share adjusts to 85%; otherwise the landlord receives 90% and RoomLink's 10% is unaffected.</p>
+        <p><strong style="color:var(--ink)">6. Affiliate program.</strong> Affiliates earn a commission only on rentals genuinely referred through their link. Self-referral, or claiming a commission on a listing you posted yourself, is not permitted and will be excluded from payout. RoomLink may suspend affiliate status for abuse.</p>
+        <p><strong style="color:var(--ink)">7. Payouts.</strong> Landlord and affiliate payouts are currently processed manually while RoomLink's automated payout system is under development. Providing accurate bank details is your responsibility; RoomLink is not liable for funds sent to incorrect details you provided.</p>
+        <p><strong style="color:var(--ink)">8. Disputes.</strong> If a rental doesn't go as described or a move-in cannot be confirmed in good faith, use the dispute option in your rentals dashboard. RoomLink will review disputes manually and is not obligated to guarantee a specific outcome.</p>
+        <p><strong style="color:var(--ink)">9. Prohibited conduct.</strong> You may not post fraudulent or duplicate listings, misrepresent yourself as a landlord you are not authorized to represent, or attempt to circumvent RoomLink's payment system to avoid commission.</p>
+        <p><strong style="color:var(--ink)">10. Data.</strong> RoomLink stores the information you provide (name, email, phone, listing details, and — if applicable — bank details for payout) via Supabase, and processes payments via Paystack. This data is used only to operate the platform.</p>
+        <p><strong style="color:var(--ink)">11. Limitation of liability.</strong> RoomLink facilitates connections and payment protection between students and landlords but does not guarantee the condition, safety, or availability of any property. Use of the platform is at your own discretion.</p>
+        <p><strong style="color:var(--ink)">12. Changes.</strong> These terms may be updated as the platform develops. Continued use of RoomLink after changes constitutes acceptance of the updated terms.</p>
+        <p style="margin-top:14px">This is a student project (COM 125) prototype. By checking the box at signup, you acknowledge and agree to the above.</p>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeTerms').addEventListener('click', ()=>openAuth('signup'));
 }
 function openAuth(mode){
   authMode = mode;
@@ -710,6 +846,10 @@ function authSheetHtml(){
         <div class="checkbox-row">
           <input type="checkbox" name="isAffiliate" id="isAffiliate"/>
           <div class="txt"><strong>Also become an affiliate</strong><span>Share your referral link and earn 5% when someone rents through it.</span></div>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" name="acceptTerms" id="acceptTerms" required/>
+          <div class="txt"><strong>I agree to the <button type="button" id="viewTermsBtn" class="btn-text" style="font-size:13.5px;padding:0">Terms &amp; Conditions</button></strong><span>Required to create an account.</span></div>
         </div>` : ''}
         <button type="submit" class="btn-primary btn-full" id="authSubmit">
           ${authMode==='signup' ? 'Create account' : authMode==='forgot' ? 'Send reset link' : 'Log in'}
@@ -738,6 +878,8 @@ function wireAuthSheet(){
   if(pwInput && document.getElementById('pwChecklist')){
     pwInput.addEventListener('input', ()=>updatePasswordStrength(pwInput.value));
   }
+  const viewTermsBtn = document.getElementById('viewTermsBtn');
+  if(viewTermsBtn) viewTermsBtn.addEventListener('click', showTermsSheet);
 
   document.getElementById('authForm').addEventListener('submit', async e=>{
     e.preventDefault();
@@ -749,6 +891,10 @@ function wireAuthSheet(){
       const checks = passwordChecks(fd.get('password'));
       if(!Object.values(checks).every(Boolean)){
         msgEl.innerHTML = `<div class="auth-error">Your password doesn't meet all the requirements yet.</div>`;
+        return;
+      }
+      if(!fd.get('acceptTerms')){
+        msgEl.innerHTML = `<div class="auth-error">Please agree to the Terms &amp; Conditions to create an account.</div>`;
         return;
       }
     }
@@ -790,7 +936,7 @@ function wireAuthSheet(){
           setTimeout(showAffiliatePromo, 550);
         }
       } else if(authMode==='forgot'){
-        const { error } = await sb.auth.resetPasswordForEmail(fd.get('email'), { redirectTo: window.location.href });
+        const { error } = await sb.auth.resetPasswordForEmail(fd.get('email'), { redirectTo: window.location.origin + window.location.pathname });
         if(error) throw error;
         msgEl.innerHTML = `<div class="auth-success">Reset link sent — check your email.</div>`;
       }
@@ -850,7 +996,12 @@ async function refreshSession(){
     profile = p;
   } else { profile = null; }
 }
-sb.auth.onAuthStateChange((_event, s)=>{ session = s; });
+sb.auth.onAuthStateChange((_event, s)=>{
+  session = s;
+  if(_event === 'PASSWORD_RECOVERY'){
+    showNewPasswordPopup();
+  }
+});
 
 /* ============ Data: listings ============ */
 function isBoosted(l){ return !!(l.boosted_until && new Date(l.boosted_until) > new Date()); }
@@ -1186,9 +1337,13 @@ function openDetail(id){
   if(!l) return;
   const previewHasAffiliate = !!localStorage.getItem('rl_ref_code');
   const { landlord, affiliate, company } = computeSplit(l.price, previewHasAffiliate);
+  const photos = l.photo_urls && l.photo_urls.length ? l.photo_urls : [];
+  const cover = photos[0] || null;
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
-    <div class="sheet-thumb">${iconSvg('home','width="42" height="42"')}
+    <div class="sheet-thumb" ${cover ? `style="background-image:url('${esc(cover)}');background-size:cover;background-position:center;cursor:pointer" id="sheetThumbClickable"` : ''}>
+      ${cover ? '' : iconSvg('home','width="42" height="42"')}
+      ${photos.length > 1 ? `<div class="protected-badge" style="left:10px;right:auto;bottom:10px;top:auto">${iconSvg('spark','width="10" height="10"')}${photos.length} photos — tap to view</div>` : (cover ? `<div class="protected-badge" style="left:10px;right:auto;bottom:10px;top:auto">Tap to view</div>` : '')}
       <div class="close-x" id="closeSheet"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></div>
     </div>
     <div class="sheet-content">
@@ -1226,6 +1381,11 @@ function openDetail(id){
   `;
   document.getElementById('overlay').classList.add('open');
   document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  const sheetThumb = document.getElementById('sheetThumbClickable');
+  if(sheetThumb) sheetThumb.addEventListener('click', e=>{
+    if(e.target.closest('.close-x')) return;
+    openLightbox(photos, 0);
+  });
   document.getElementById('rentBtn').addEventListener('click', ()=>startRentPayment(l));
   loadComments(l);
   const commentInput = document.getElementById('commentInput');
@@ -1311,6 +1471,31 @@ async function loadComments(listing){
   }));
 }
 function closeDetail(){ const ov = document.getElementById('overlay'); ov.classList.remove('open'); ov.classList.remove('center-modal'); }
+
+/* ============ Photo lightbox ============ */
+function openLightbox(photos, startIndex){
+  if(!photos || !photos.length) return;
+  const lightbox = document.getElementById('lightbox');
+  const track = document.getElementById('lightboxTrack');
+  const dots = document.getElementById('lightboxDots');
+  track.innerHTML = photos.map(url=>`<div class="lightbox-slide"><img src="${esc(url)}" /></div>`).join('');
+  dots.innerHTML = photos.length > 1 ? photos.map((_,i)=>`<span class="dot ${i===startIndex?'active':''}"></span>`).join('') : '';
+  lightbox.classList.add('open');
+  // Jump to the tapped photo without an animated scroll
+  requestAnimationFrame(()=>{ track.scrollLeft = startIndex * track.clientWidth; });
+  const dotEls = dots.querySelectorAll('.dot');
+  let scrollTimer;
+  track.onscroll = ()=>{
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(()=>{
+      const idx = Math.round(track.scrollLeft / track.clientWidth);
+      dotEls.forEach((d,i)=>d.classList.toggle('active', i===idx));
+    }, 80);
+  };
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+document.getElementById('lightbox').addEventListener('click', e=>{ if(e.target.id==='lightbox') closeLightbox(); });
 document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeDetail(); });
 
 async function startRentPayment(listing){
@@ -1360,12 +1545,10 @@ async function handleRentSuccess(listing, ref){
       // this payment starting and finishing. Payment still succeeded and the
       // transaction is recorded — this needs a manual look/refund from you.
       showToast('Rent paid, but this room was just filled by someone else — we\'ll follow up with you directly.');
-    } else if(remaining > 0){
-      showToast(`Rent paid — landlord contact unlocked. ${remaining} room${remaining!==1?'s':''} still left on this listing.`);
+      view = 'dashboard'; renderAll();
     } else {
-      showToast('Rent paid — landlord contact unlocked. Track your move-in in "My Rentals".');
+      showRentPaidPopup(listing, remaining);
     }
-    view = 'dashboard'; renderAll();
   }catch(err){
     showToast('Payment succeeded but saving failed: ' + (err.message||'contact support'));
   }
@@ -1415,10 +1598,12 @@ async function loadMyListings(){
     el.innerHTML = `<div class="empty">${iconSvg('home')}<h3>You haven't listed anything yet</h3><p>Head to "List a Room" to add your first one.</p></div>`;
     return;
   }
+  const owedMap = await fetchLandlordOwedSummary(myListings.map(l=>l.id));
   el.innerHTML = myListings.map(l=>{
     const boosted = isBoosted(l);
     const total = l.total_rooms || 1;
     const avail = l.available_rooms != null ? l.available_rooms : total;
+    const owed = owedMap[l.id] || 0;
     return `
     <div class="rental-card">
       <h3>${esc(l.title)}</h3>
@@ -1432,12 +1617,77 @@ async function loadMyListings(){
           <button class="btn-secondary" data-boost="${l.id}" data-days="7">Boost 7 days (${naira(BOOST_PRICE_PER_DAY*7)})</button>
         </div>
       `}
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Landlord payout — ${esc(l.landlord_name)}</div>
+        ${owed > 0 ? `<div class="stat-card" style="margin-bottom:12px"><div class="lbl">Owed to landlord (confirmed rentals)</div><div class="val">${naira(owed)}</div></div>` : ''}
+        <div id="landlordBank-${l.id}"></div>
+        <div style="margin-top:10px">
+          <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw to landlord<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
+        </div>
+      </div>
     </div>`;
   }).join('');
   el.querySelectorAll('[data-boost]').forEach(b=>b.addEventListener('click', ()=>{
     const listing = myListings.find(x=>x.id===b.dataset.boost);
     if(listing) startBoostPayment(listing, Number(b.dataset.days));
   }));
+  myListings.forEach(l=>renderLandlordBankSection(l));
+}
+async function fetchLandlordOwedSummary(listingIds){
+  if(!listingIds.length) return {};
+  const { data, error } = await sb.from('transactions').select('listing_id, landlord_payout').in('listing_id', listingIds).eq('status','confirmed');
+  if(error){ console.error(error); return {}; }
+  const map = {};
+  data.forEach(t=>{ map[t.listing_id] = (map[t.listing_id] || 0) + Number(t.landlord_payout || 0); });
+  return map;
+}
+let editingLandlordBankId = null;
+function renderLandlordBankSection(listing){
+  const el = document.getElementById(`landlordBank-${listing.id}`);
+  if(!el) return;
+  const hasDetails = listing.landlord_bank_name && listing.landlord_bank_account_name && listing.landlord_bank_account_number;
+  if(hasDetails && editingLandlordBankId !== listing.id){
+    el.innerHTML = `
+      <div class="stat-card" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Bank</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account name</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_account_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account number</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_account_number)}</strong></div>
+      </div>
+      <button class="btn-secondary" data-edit-landlord-bank="${listing.id}" style="margin-top:10px">${iconSvg('reply','width="14" height="14"')}Edit landlord's bank details</button>
+    `;
+    el.querySelector('[data-edit-landlord-bank]').addEventListener('click', ()=>{ editingLandlordBankId = listing.id; renderLandlordBankSection(listing); });
+  } else {
+    el.innerHTML = `
+      <form class="landlord-bank-form">
+        <div class="field"><label>Landlord's bank name</label><input name="bankName" value="${esc(listing.landlord_bank_name||'')}" placeholder="e.g. GTBank"/></div>
+        <div class="field-row">
+          <div class="field"><label>Account name</label><input name="acctName" value="${esc(listing.landlord_bank_account_name||'')}" placeholder="Name on account"/></div>
+          <div class="field"><label>Account number</label><input name="acctNumber" value="${esc(listing.landlord_bank_account_number||'')}" placeholder="10-digit number"/></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button type="submit" class="btn-secondary">Save landlord's bank details</button>
+          ${hasDetails ? `<button type="button" class="btn-text" data-cancel-landlord-bank>Cancel</button>` : ''}
+        </div>
+      </form>
+    `;
+    const cancelBtn = el.querySelector('[data-cancel-landlord-bank]');
+    if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingLandlordBankId = null; renderLandlordBankSection(listing); });
+    el.querySelector('.landlord-bank-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try{
+        await sb.from('listings').update({
+          landlord_bank_name: fd.get('bankName'), landlord_bank_account_name: fd.get('acctName'), landlord_bank_account_number: fd.get('acctNumber'),
+        }).eq('id', listing.id);
+        listing.landlord_bank_name = fd.get('bankName');
+        listing.landlord_bank_account_name = fd.get('acctName');
+        listing.landlord_bank_account_number = fd.get('acctNumber');
+        editingLandlordBankId = null;
+        renderLandlordBankSection(listing);
+        showSuccessPopup('Landlord\'s payment details added!', 'These will be used to pay the landlord once rentals on this listing are confirmed.');
+      }catch(err){ showToast('Could not save: ' + (err.message||'try again')); }
+    });
+  }
 }
 function renderDashboard(){
   mainEl.innerHTML = `
