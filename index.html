@@ -137,6 +137,10 @@
 
   .results-col{flex:1;min-width:0;}
   .results-count{font-size:13px;color:var(--muted);margin-bottom:14px;}
+  .pagination-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px;flex-wrap:wrap;}
+  .pagination-row button{display:inline-flex;align-items:center;gap:6px;}
+  .pagination-row button:disabled{opacity:.4;cursor:not-allowed;}
+  .pagination-label{font-size:12.5px;color:var(--muted);font-weight:600;}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
   .listing-card{
@@ -459,73 +463,7 @@
   </div>
   <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
-  <footer class="premium-footer">
-    <div class="footer-grid">
-      <div class="footer-col">
-        <div class="brand" style="margin-bottom:12px">
-          <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/></svg></div>
-          <div class="brand-name">RoomLink</div>
-        </div>
-        <p>RoomLink connects students with off-campus rooms listed by fellow students, with rent held safely until move-in is confirmed.</p>
-        <div class="footer-trust">
-          <span>${iconSvg('shield')}Rent protection on every booking</span>
-          <span>${iconSvg('lock')}Secure payments via Paystack</span>
-          <span>${iconSvg('spark')}Built by and for students</span>
-        </div>
-      </div>
-      <div class="footer-col">
-        <h5>Quick Links</h5>
-        <ul>
-          <li><button data-footer-nav="browse">Find a Room</button></li>
-          <li><button data-footer-nav="browse">Browse Apartments</button></li>
-          <li><button data-footer-nav="list">Post a Property</button></li>
-          <li><button data-footer-nav="commission">How Fees Work</button></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h5>Company</h5>
-        <ul>
-          <li><button data-footer-info="about">About Us</button></li>
-          <li><button data-footer-info="contact">Contact</button></li>
-          <li><button data-footer-info="help">Help Center</button></li>
-          <li><button data-footer-info="faq">FAQs</button></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h5>Legal</h5>
-        <ul>
-          <li><button data-footer-info="privacy">Privacy Policy</button></li>
-          <li><button id="footerTermsBtn">Terms &amp; Conditions</button></li>
-          <li><button data-footer-info="cookies">Cookie Policy</button></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h5>Stay Connected</h5>
-        <div class="footer-social">
-          <button class="footer-social-btn" title="Facebook">${iconSvg('facebook')}</button>
-          <button class="footer-social-btn" title="Instagram">${iconSvg('instagram')}</button>
-          <button class="footer-social-btn" title="X">${iconSvg('xTwitter')}</button>
-          <button class="footer-social-btn" title="LinkedIn">${iconSvg('linkedin')}</button>
-        </div>
-        <form id="newsletterForm" class="newsletter-form">
-          <input type="email" id="newsletterEmail" required placeholder="you@school.edu.ng"/>
-          <button type="submit">${iconSvg('mail','width="14" height="14"')}</button>
-        </form>
-        <div class="newsletter-hint">Get notified when new verified apartments become available.</div>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <div>
-        <p>© 2026 RoomLink. All rights reserved.</p>
-        <p style="margin-top:3px">Made to simplify apartment hunting.</p>
-      </div>
-      <div class="footer-bottom-links">
-        <button data-footer-info="privacy">Privacy</button>
-        <button id="footerTermsBtn2">Terms</button>
-        <button data-footer-info="help">Support</button>
-      </div>
-    </div>
-  </footer>
+  <footer class="premium-footer" id="premiumFooter"></footer>
 </div>
 
 <script>
@@ -594,6 +532,8 @@ let listings = [];
 let myTransactions = [];
 let affiliateStats = null;
 let fLocation='all', fType='all', fMaxPrice=1000000;
+let currentPage = 1;
+const PAGE_SIZE = 6;
 const PRICE_CEILING = 10000000;
 let darkMode = localStorage.getItem('rl-theme') === 'dark';
 let authMode = 'login'; // login | signup | forgot
@@ -975,7 +915,79 @@ function showInfoSheet(key){
   document.getElementById('overlay').classList.add('open');
   document.getElementById('closeSheet').addEventListener('click', closeDetail);
 }
+function renderFooter(){
+  const el = document.getElementById('premiumFooter');
+  if(!el) return;
+  el.innerHTML = `
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="brand" style="margin-bottom:12px">
+          <div class="brand-mark">${iconSvg('home')}</div>
+          <div class="brand-name">RoomLink</div>
+        </div>
+        <p>RoomLink connects students with off-campus rooms listed by fellow students, with rent held safely until move-in is confirmed.</p>
+        <div class="footer-trust">
+          <span>${iconSvg('shield')}Rent protection on every booking</span>
+          <span>${iconSvg('lock')}Secure payments via Paystack</span>
+          <span>${iconSvg('spark')}Built by and for students</span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h5>Quick Links</h5>
+        <ul>
+          <li><button data-footer-nav="browse">Find a Room</button></li>
+          <li><button data-footer-nav="browse">Browse Apartments</button></li>
+          <li><button data-footer-nav="list">Post a Property</button></li>
+          <li><button data-footer-nav="commission">How Fees Work</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul>
+          <li><button data-footer-info="about">About Us</button></li>
+          <li><button data-footer-info="contact">Contact</button></li>
+          <li><button data-footer-info="help">Help Center</button></li>
+          <li><button data-footer-info="faq">FAQs</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Legal</h5>
+        <ul>
+          <li><button data-footer-info="privacy">Privacy Policy</button></li>
+          <li><button id="footerTermsBtn">Terms &amp; Conditions</button></li>
+          <li><button data-footer-info="cookies">Cookie Policy</button></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Stay Connected</h5>
+        <div class="footer-social">
+          <button class="footer-social-btn" title="Facebook">${iconSvg('facebook')}</button>
+          <button class="footer-social-btn" title="Instagram">${iconSvg('instagram')}</button>
+          <button class="footer-social-btn" title="X">${iconSvg('xTwitter')}</button>
+          <button class="footer-social-btn" title="LinkedIn">${iconSvg('linkedin')}</button>
+        </div>
+        <form id="newsletterForm" class="newsletter-form">
+          <input type="email" id="newsletterEmail" required placeholder="you@school.edu.ng"/>
+          <button type="submit">${iconSvg('mail','width="14" height="14"')}</button>
+        </form>
+        <div class="newsletter-hint">Get notified when new verified apartments become available.</div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>
+        <p>© 2026 RoomLink. All rights reserved.</p>
+        <p style="margin-top:3px">Made to simplify apartment hunting.</p>
+      </div>
+      <div class="footer-bottom-links">
+        <button data-footer-info="privacy">Privacy</button>
+        <button id="footerTermsBtn2">Terms</button>
+        <button data-footer-info="help">Support</button>
+      </div>
+    </div>
+  `;
+}
 function wireFooter(){
+  renderFooter();
   document.querySelectorAll('[data-footer-nav]').forEach(b=>b.addEventListener('click', ()=>{
     const target = b.dataset.footerNav;
     if(target==='list' && !session){ openAuth('login'); return; }
@@ -1043,6 +1055,15 @@ function authSheetHtml(){
       <h2 style="margin-bottom:4px">${authMode==='signup' ? 'Create your account' : authMode==='forgot' ? 'Reset your password' : 'Log in'}</h2>
       <p style="color:var(--muted);font-size:13px;margin-bottom:18px">${authMode==='signup' ? 'Join RoomLink to list rooms and rent with protection.' : authMode==='forgot' ? "We'll email you a reset link." : 'Welcome back.'}</p>
       ${authMode!=='forgot' ? `
+      <button type="button" class="btn-secondary btn-full" id="googleAuthBtn" style="margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:10px">
+        <svg width="17" height="17" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.81.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:11.5px;color:var(--muted)">or</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+      </div>
       <div class="auth-tabs">
         <button data-m="login" class="${authMode==='login'?'active':''}">Log in</button>
         <button data-m="signup" class="${authMode==='signup'?'active':''}">Sign up</button>
@@ -1096,6 +1117,17 @@ function wireAuthSheet(){
   if(toForgot) toForgot.addEventListener('click', ()=>openAuth('forgot'));
   const backToLogin = document.getElementById('backToLogin');
   if(backToLogin) backToLogin.addEventListener('click', ()=>openAuth('login'));
+
+  const googleBtn = document.getElementById('googleAuthBtn');
+  if(googleBtn) googleBtn.addEventListener('click', async ()=>{
+    googleBtn.disabled = true;
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if(error){ showToast('Could not start Google sign-in: ' + error.message); googleBtn.disabled = false; }
+    // On success, the browser redirects to Google, so no further code runs here.
+  });
 
   const pwInput = document.getElementById('passwordInput');
   const togglePw = document.getElementById('togglePw');
@@ -1154,16 +1186,8 @@ function wireAuthSheet(){
           throw error;
         }
         closeDetail();
-        await refreshSession();
-        renderAccountButton();
-        await fetchNotifications();
-        renderNotifBtn();
-        const firstName = (profile && profile.full_name || '').trim().split(' ')[0];
-        showToast(firstName ? `Welcome back, ${firstName}!` : 'Welcome back!');
-        view='browse'; renderAll();
-        if(profile && !profile.is_affiliate){
-          setTimeout(showAffiliatePromo, 550);
-        }
+        // Everything else (profile refresh, welcome toast, affiliate promo) is
+        // handled centrally by the SIGNED_IN listener below — shared with Google login.
       } else if(authMode==='forgot'){
         const { error } = await sb.auth.resetPasswordForEmail(fd.get('email'), { redirectTo: window.location.origin + window.location.pathname });
         if(error) throw error;
@@ -1212,7 +1236,7 @@ function openAccountMenu(){
   });
   document.getElementById('signOutBtn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
-    session=null; profile=null; notifications=[]; unreadCount=0; view='browse';
+    session=null; profile=null; notifications=[]; unreadCount=0; view='browse'; lastHandledUserId=null;
     closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn();
     showToast('Logged out.');
   });
@@ -1225,12 +1249,34 @@ async function refreshSession(){
     profile = p;
   } else { profile = null; }
 }
+let lastHandledUserId = null;
 sb.auth.onAuthStateChange((_event, s)=>{
   session = s;
   if(_event === 'PASSWORD_RECOVERY'){
     showNewPasswordPopup();
+    return;
+  }
+  // SIGNED_IN fires for password login, Google's redirect completing, AND
+  // (per Supabase's own docs) sometimes just on tab refocus for an already-
+  // signed-in user — this guard stops it from re-showing the welcome popup
+  // and affiliate promo every time that happens.
+  if(_event === 'SIGNED_IN' && s && s.user && s.user.id !== lastHandledUserId){
+    lastHandledUserId = s.user.id;
+    handleSignedIn();
   }
 });
+async function handleSignedIn(){
+  await refreshSession();
+  renderAccountButton();
+  await fetchNotifications();
+  renderNotifBtn();
+  const firstName = (profile && profile.full_name || '').trim().split(' ')[0];
+  showToast(firstName ? `Welcome back, ${firstName}!` : 'Welcome back!');
+  view='browse'; renderAll();
+  if(profile && !profile.is_affiliate){
+    setTimeout(showAffiliatePromo, 550);
+  }
+}
 
 /* ============ Data: listings ============ */
 function isBoosted(l){ return !!(l.boosted_until && new Date(l.boosted_until) > new Date()); }
@@ -1390,13 +1436,16 @@ function renderBrowse(){
     if(l.price > fMaxPrice) return false;
     return true;
   });
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+  const pageItems = list.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
   mainEl.innerHTML = `
     <div class="hero fade-in">
       <div class="eyebrow">Verified peer listings</div>
       <h1>Find your next room off-campus</h1>
       <p>Browse rooms listed by fellow students. Rent is held safely until you confirm you've moved in — the landlord and referring student get paid only then.</p>
     </div>
-    <div id="proofSection"></div>
     <div class="browse-layout">
       <aside class="filters glass fade-in">
         <h4>Filter results</h4>
@@ -1418,12 +1467,19 @@ function renderBrowse(){
       </aside>
       <div class="results-col">
         <div class="results-count">${list.length} room${list.length!==1?'s':''} available</div>
-        <div class="grid" id="grid">${list.length ? list.map(listingCard).join('') : emptyHtml()}</div>
+        <div class="grid" id="grid">${pageItems.length ? pageItems.map(listingCard).join('') : emptyHtml()}</div>
+        ${list.length ? `
+        <div class="pagination-row">
+          <button class="btn-secondary" id="prevPageBtn" ${currentPage<=1?'disabled':''}>${iconSvg('arrowRight','width="16" height="16" style="transform:rotate(180deg)"')}Previous</button>
+          <span class="pagination-label">Page ${currentPage} of ${totalPages}</span>
+          <button class="btn-secondary" id="nextPageBtn" ${currentPage>=totalPages?'disabled':''}>Next${iconSvg('arrowRight','width="16" height="16"')}</button>
+        </div>` : ''}
       </div>
     </div>
+    <div id="proofSection"></div>
   `;
-  mainEl.querySelector('#fLoc').addEventListener('change', e=>{ fLocation=e.target.value; renderBrowse(); });
-  mainEl.querySelector('#fType').addEventListener('change', e=>{ fType=e.target.value; renderBrowse(); });
+  mainEl.querySelector('#fLoc').addEventListener('change', e=>{ fLocation=e.target.value; currentPage=1; renderBrowse(); });
+  mainEl.querySelector('#fType').addEventListener('change', e=>{ fType=e.target.value; currentPage=1; renderBrowse(); });
   const priceSlider = mainEl.querySelector('#fPrice');
   const priceType = mainEl.querySelector('#fPriceType');
   priceSlider.addEventListener('input', e=>{
@@ -1431,13 +1487,18 @@ function renderBrowse(){
     mainEl.querySelector('#priceVal').textContent = naira(fMaxPrice);
     priceType.value = fMaxPrice;
   });
-  priceSlider.addEventListener('change', ()=> renderBrowse());
+  priceSlider.addEventListener('change', ()=>{ currentPage=1; renderBrowse(); });
   priceType.addEventListener('change', e=>{
     let val = Number(e.target.value) || 0;
     fMaxPrice = val;
+    currentPage=1;
     renderBrowse();
   });
-  mainEl.querySelector('#resetFilters').addEventListener('click', ()=>{ fLocation='all'; fType='all'; fMaxPrice=1000000; renderBrowse(); });
+  mainEl.querySelector('#resetFilters').addEventListener('click', ()=>{ fLocation='all'; fType='all'; fMaxPrice=1000000; currentPage=1; renderBrowse(); });
+  const prevBtn = mainEl.querySelector('#prevPageBtn');
+  const nextBtn = mainEl.querySelector('#nextPageBtn');
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{ currentPage--; renderBrowse(); document.querySelector('.results-col').scrollIntoView({behavior:'smooth'}); });
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{ currentPage++; renderBrowse(); document.querySelector('.results-col').scrollIntoView({behavior:'smooth'}); });
   mainEl.querySelectorAll('.listing-card').forEach(c=>c.addEventListener('click', ()=>openDetail(c.dataset.id)));
   mainEl.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click', e=>{
     e.stopPropagation();
