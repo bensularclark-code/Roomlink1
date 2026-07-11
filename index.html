@@ -117,6 +117,18 @@
   .like-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--muted);}
   .like-btn.liked{color:var(--danger);}
   .like-btn svg{width:16px;height:16px;}
+  .chat-thread{display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto;padding:4px 2px;}
+  .chat-bubble{max-width:78%;padding:10px 13px;border-radius:15px;font-size:13.5px;line-height:1.45;}
+  .chat-bubble.mine{align-self:flex-end;background:var(--lemon-grad);color:var(--ink);border-bottom-right-radius:4px;}
+  .chat-bubble.theirs{align-self:flex-start;background:var(--card);color:var(--ink);border-bottom-left-radius:4px;}
+  .chat-bubble .chat-time{font-size:10px;opacity:.6;margin-top:4px;display:block;}
+  .chat-blocked-note{background:#FDEDED;color:var(--danger);border-radius:10px;padding:9px 12px;font-size:12px;margin-bottom:10px;}
+  [data-theme="dark"] .chat-blocked-note{background:rgba(214,69,69,0.15);}
+  .conversation-row{display:flex;gap:12px;align-items:center;padding:14px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .conversation-row:last-child{border-bottom:none;}
+  .conversation-row .conv-avatar{width:40px;height:40px;border-radius:50%;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+  .conversation-row .conv-title{font-size:13.5px;font-weight:700;}
+  .conversation-row .conv-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
 
   main{flex:1;padding:24px 20px 100px;}
 
@@ -471,6 +483,9 @@
 const SUPABASE_URL = 'https://oicegvujvgfrlfbdjali.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pY2VndnVqdmdmcmxmYmRqYWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NTg4OTMsImV4cCI6MjA5OTAzNDg5M30.8IT2zqSwiL3YmeFLcLXTITKn7Q4czqkGjk_bxousi8I';
 const PAYSTACK_PUBLIC_KEY = 'pk_test_007813fd3acc3cf7ad58bf827ba95f668a99c487';
+// TODO: swap these for your real support email and WhatsApp number (with country code, no + or leading 0)
+const SUPPORT_EMAIL = 'roomlinksupport@gmail.com';
+const SUPPORT_WHATSAPP = '2348000000000';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -506,6 +521,7 @@ const ICONS = {
   instagram:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17.2" cy="6.8" r="1"/>',
   xTwitter:'<path d="m4 4 16 16M20 4 4 20"/>',
   linkedin:'<rect x="3" y="3" width="18" height="18" rx="3"/><line x1="7.5" y1="9.5" x2="7.5" y2="16.5"/><circle cx="7.5" cy="6.5" r="1"/><path d="M11.5 16.5v-4a2.5 2.5 0 0 1 5 0v4M11.5 10.5v6"/>',
+  message:'<path d="M4 5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4.5 4v-4H6a2 2 0 0 1-2-2Z"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.6 6.6A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
@@ -566,6 +582,7 @@ function tabList(){
   ];
   if(session){
     base.push({id:'mylistings', label:'My Listings'});
+    base.push({id:'messages', label:'Messages'});
     base.push({id:'dashboard', label:'My Rentals'});
     if(profile && profile.is_affiliate) base.push({id:'affiliate', label:'Affiliate'});
   }
@@ -575,7 +592,7 @@ function renderTabs(){
   const el = document.getElementById('tabs');
   el.innerHTML = tabList().map(t=>`<button data-view="${t.id}" class="${view===t.id?'active':''}">${esc(t.label)}</button>`).join('');
   el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
-    if((b.dataset.view==='dashboard' || b.dataset.view==='affiliate' || b.dataset.view==='list' || b.dataset.view==='mylistings') && !session){
+    if((b.dataset.view==='dashboard' || b.dataset.view==='affiliate' || b.dataset.view==='list' || b.dataset.view==='mylistings' || b.dataset.view==='messages') && !session){
       openAuth('login'); return;
     }
     view = b.dataset.view; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
@@ -871,8 +888,12 @@ const FOOTER_INFO = {
   },
   contact: {
     title: 'Contact Us',
-    body: `<p>The fastest way to reach RoomLink right now is through the account you're logged in with — any issue you report is tied to your account, which helps us sort it out faster.</p>
-      <p>For anything urgent involving a payment or a dispute, use the "Raise a dispute" option on the relevant rental in your My Rentals dashboard so it's logged and tracked properly.</p>`
+    body: `<p>The fastest way to reach RoomLink is through your account — any issue you report is tied to your account, which helps us sort it out faster. For payment or move-in issues specifically, use "Raise a dispute" on the relevant rental in My Rentals so it's logged and tracked.</p>
+      <p>For anything else, reach us directly:</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <a href="mailto:${esc(SUPPORT_EMAIL)}" class="btn-secondary btn-full" style="display:flex;justify-content:center;gap:8px">${iconSvg('mail','width="16" height="16"')}${esc(SUPPORT_EMAIL)}</a>
+        <a href="https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hi RoomLink, I need help with ')}" target="_blank" rel="noopener" class="btn-primary btn-full" style="display:flex;justify-content:center;gap:8px">${iconSvg('phone','width="16" height="16"')}Chat on WhatsApp</a>
+      </div>`
   },
   help: {
     title: 'Help Center',
@@ -1419,6 +1440,7 @@ function renderAll(){
   else if(view==='dashboard') renderDashboard();
   else if(view==='affiliate') renderAffiliate();
   else if(view==='mylistings') renderMyListings();
+  else if(view==='messages') renderMessagesInbox();
 }
 
 /* ============ Browse ============ */
@@ -1649,6 +1671,7 @@ function listingCard(l){
         <div class="meta">${iconSvg('pin','width="13" height="13"')}${esc(l.location)}</div>
         <span class="roomtype-pill">${rtLabel(l.room_type)}</span>
         ${total > 1 ? `<span class="roomtype-pill" style="margin-left:6px">${avail} of ${total} rooms left</span>` : ''}
+        ${l.lister_type === 'agent' ? `<span class="roomtype-pill" style="margin-left:6px">Listed by Agent</span>` : ''}
       </div>
     </div>`;
 }
@@ -1689,6 +1712,13 @@ function renderListForm(){
           <div class="hint">Up to 5 photos of the room and amenities. First photo becomes the cover image.</div>
           <div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
         </div>
+        <div class="field">
+          <label>Are you listing as the landlord, or as an agent?</label>
+          <div class="category-pick" id="listerTypePick" style="grid-template-columns:repeat(2,1fr)">
+            <button type="button" data-lt="landlord" class="active">I'm the landlord</button>
+            <button type="button" data-lt="agent">I'm an agent</button>
+          </div>
+        </div>
         <div class="field-row">
           <div class="field"><label>Landlord name</label><input name="landlordName" required placeholder="e.g. Mr. Adeyemi"/></div>
           <div class="field"><label>Landlord phone</label><input name="landlordPhone" required placeholder="e.g. 080xx-xxx-xxx"/></div>
@@ -1697,12 +1727,18 @@ function renderListForm(){
       </form>
     </div>
   `;
+  let currentListerType = 'landlord';
   let currentRT = ROOM_TYPES[0].id;
   let selectedAmenities = new Set();
   let selectedFiles = [];
   mainEl.querySelectorAll('#roomTypePick button').forEach(b=>b.addEventListener('click', ()=>{
     currentRT = b.dataset.rt;
     mainEl.querySelectorAll('#roomTypePick button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  mainEl.querySelectorAll('#listerTypePick button').forEach(b=>b.addEventListener('click', ()=>{
+    currentListerType = b.dataset.lt;
+    mainEl.querySelectorAll('#listerTypePick button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
   }));
   mainEl.querySelectorAll('#amenitiesPick button').forEach(b=>b.addEventListener('click', ()=>{
@@ -1730,7 +1766,7 @@ function renderListForm(){
         location: fd.get('location').trim(), description: fd.get('description').trim(),
         landlord_name: fd.get('landlordName').trim(), landlord_phone: fd.get('landlordPhone').trim(),
         amenities: Array.from(selectedAmenities), photo_urls: photoUrls,
-        total_rooms: totalRooms, available_rooms: totalRooms,
+        total_rooms: totalRooms, available_rooms: totalRooms, lister_type: currentListerType,
       });
       showToast('Listing submitted — now live for students to browse.');
       await fetchListings();
@@ -1760,6 +1796,7 @@ function openDetail(id){
     </div>
     <div class="sheet-content">
       <span class="roomtype-pill">${rtLabel(l.room_type)}</span>
+      ${l.lister_type === 'agent' ? `<span class="roomtype-pill" style="margin-left:6px">Listed by Agent</span>` : ''}
       <h2 style="margin-top:8px">${esc(l.title)}</h2>
       <div class="price-row">${naira(l.price)} <span>/ ${(l.total_rooms||1) > 1 ? 'room / year' : 'year'}</span></div>
       <p class="desc-full">${esc(l.description)}</p>
@@ -1786,8 +1823,9 @@ function openDetail(id){
         </form>` : `
         <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Log in to leave a comment.</p>`}
       </div>
-      <div class="sheet-actions">
-        <button class="btn-primary btn-full" id="rentBtn">${iconSvg('handshake','width="17" height="17"')}Pay rent &amp; connect</button>
+      <div class="sheet-actions" style="flex-wrap:wrap">
+        ${session && l.lister_id !== session.user.id ? `<button class="btn-secondary" id="messageLandlordBtn" style="flex:1">${iconSvg('message','width="16" height="16"')}Message Landlord</button>` : ''}
+        <button class="btn-primary btn-full" id="rentBtn" style="flex:1">${iconSvg('handshake','width="17" height="17"')}Pay rent &amp; connect</button>
       </div>
     </div>
   `;
@@ -1799,6 +1837,8 @@ function openDetail(id){
     openLightbox(photos, 0);
   });
   document.getElementById('rentBtn').addEventListener('click', ()=>startRentPayment(l));
+  const messageLandlordBtn = document.getElementById('messageLandlordBtn');
+  if(messageLandlordBtn) messageLandlordBtn.addEventListener('click', ()=>openChatThread(l, session.user.id));
   loadComments(l);
   const commentInput = document.getElementById('commentInput');
   if(commentInput) attachLettersOnlyFilter(commentInput);
@@ -1819,6 +1859,14 @@ function openDetail(id){
   });
 }
 function stripDigits(str){ return (str||'').replace(/[0-9]/g, ''); }
+function containsForbiddenContent(msg){
+  msg = msg || '';
+  if(/(\d[\s\-.]?){7,}/.test(msg)) return true; // 7+ digit run — looks like a phone number
+  if(/(whatsapp|wa\.me|call me|text me|message me on|contact me on|my number|reach me on|pay me directly|send money|bank transfer|account number|off.?the.?app|outside.?the.?app|skip roomlink)/i.test(msg)) return true;
+  if(/(https?:\/\/|www\.)/i.test(msg)) return true;
+  if(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(msg)) return true;
+  return false;
+}
 function attachLettersOnlyFilter(inputEl){
   inputEl.addEventListener('input', ()=>{
     const cleaned = stripDigits(inputEl.value);
@@ -1906,6 +1954,67 @@ function openLightbox(photos, startIndex){
   };
 }
 function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ============ Messaging (pre-booking chat with contact-detail filtering) ============ */
+async function openChatThread(listing, renterId){
+  const sheet = document.getElementById('sheet');
+  const isLister = session.user.id === listing.lister_id;
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:12px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:4px">${esc(listing.title)}</h2>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">${isLister ? 'Chatting with a prospective renter' : `Chatting with ${esc(listing.landlord_name || 'the lister')}`}</p>
+      <div class="commission-note" style="margin-bottom:14px">${iconSvg('shield')}<span>For your safety, phone numbers, links, and requests to pay off-platform are automatically blocked here.</span></div>
+      <div id="chatBlockedNote"></div>
+      <div class="chat-thread" id="chatThread"><div class="empty" style="padding:20px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading...</h3></div></div>
+      <form id="chatForm" style="display:flex;gap:8px;margin-top:14px">
+        <input id="chatInput" required maxlength="500" placeholder="Type a message..." style="flex:1;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;font-size:13.5px;color:var(--ink);background:var(--white)"/>
+        <button type="submit" class="btn-primary" style="padding:10px 16px">${iconSvg('arrowRight','width="16" height="16"')}</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  await loadChatThread(listing, renterId);
+  document.getElementById('chatForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const input = document.getElementById('chatInput');
+    const content = input.value.trim();
+    if(!content) return;
+    const blockedNote = document.getElementById('chatBlockedNote');
+    if(containsForbiddenContent(content)){
+      blockedNote.innerHTML = `<div class="chat-blocked-note">${iconSvg('shield','width="12" height="12" style="vertical-align:-1px"')} That message looks like it contains a phone number, link, or an off-platform contact request — it wasn't sent. Keep the conversation here so your rent stays protected.</div>`;
+      return;
+    }
+    blockedNote.innerHTML = '';
+    try{
+      await sb.from('messages').insert({ listing_id: listing.id, renter_id: renterId, sender_id: session.user.id, content });
+      const recipientId = isLister ? renterId : listing.lister_id;
+      if(recipientId && recipientId !== session.user.id){
+        await notifyUser(recipientId, 'message', `${(profile && profile.full_name) || 'Someone'} sent you a message about "${listing.title}".`, listing.id);
+      }
+      input.value = '';
+      await loadChatThread(listing, renterId);
+    }catch(err){
+      // The database trigger is a second line of defense — this catches anything
+      // the client-side filter missed.
+      blockedNote.innerHTML = `<div class="chat-blocked-note">${iconSvg('shield','width="12" height="12" style="vertical-align:-1px"')} That message couldn't be sent — it may contain contact details that aren't allowed here.</div>`;
+    }
+  });
+}
+async function loadChatThread(listing, renterId){
+  const el = document.getElementById('chatThread');
+  if(!el) return;
+  const { data, error } = await sb.from('messages').select('*').eq('listing_id', listing.id).eq('renter_id', renterId).order('created_at',{ascending:true});
+  if(error){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted)">Couldn't load messages.</p>`; return; }
+  if(!data.length){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted);padding:10px 0">No messages yet — ask about availability, amenities, or anything else before you commit.</p>`; return; }
+  el.innerHTML = data.map(m=>{
+    const mine = m.sender_id === session.user.id;
+    const time = new Date(m.created_at).toLocaleString('en-NG',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    return `<div class="chat-bubble ${mine?'mine':'theirs'}">${esc(m.content)}<span class="chat-time">${time}</span></div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
 document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
 document.getElementById('lightbox').addEventListener('click', e=>{ if(e.target.id==='lightbox') closeLightbox(); });
 document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeDetail(); });
@@ -1991,6 +2100,66 @@ function progressBarHtml(status){
     </div></div>
   `;
 }
+async function fetchMyConversations(){
+  if(!session) return [];
+  await fetchMyListings();
+  const myListingIds = myListings.map(l=>l.id);
+  let query = sb.from('messages').select('*, listings(title, landlord_name, lister_id), renter:profiles!renter_id(full_name)').order('created_at',{ascending:false});
+  query = myListingIds.length
+    ? query.or(`renter_id.eq.${session.user.id},listing_id.in.(${myListingIds.join(',')})`)
+    : query.eq('renter_id', session.user.id);
+  const { data, error } = await query;
+  if(error){ console.error(error); return []; }
+  // Collapse to one row per conversation (listing + renter pair) — data is
+  // already newest-first, so the first occurrence of each key is the latest message.
+  const groups = {};
+  data.forEach(m=>{
+    const key = m.listing_id + '_' + m.renter_id;
+    if(!groups[key]) groups[key] = m;
+  });
+  return Object.values(groups);
+}
+function renderMessagesInbox(){
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">Messages</div>
+      <h1>Your conversations</h1>
+      <p>Ask a lister questions before you commit, or reply to students asking about your listings.</p>
+    </div>
+    <div id="conversationsWrap" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
+  `;
+  loadConversationsInbox();
+}
+async function loadConversationsInbox(){
+  const conversations = await fetchMyConversations();
+  const el = document.getElementById('conversationsWrap');
+  if(!el) return;
+  if(!conversations.length){
+    el.innerHTML = `<div class="empty">${iconSvg('message')}<h3>No conversations yet</h3><p>Message a lister from any listing's page to start one.</p></div>`;
+    return;
+  }
+  el.innerHTML = conversations.map(m=>{
+    const isLister = session.user.id === (m.listings && m.listings.lister_id);
+    const otherName = isLister ? ((m.renter && m.renter.full_name) || 'A student') : ((m.listings && m.listings.landlord_name) || 'Lister');
+    return `<div class="conversation-row" data-listing="${m.listing_id}" data-renter="${m.renter_id}">
+      <div class="conv-avatar">${esc(otherName.charAt(0))}</div>
+      <div style="flex:1;min-width:0">
+        <div class="conv-title">${esc(otherName)} · ${esc(m.listings ? m.listings.title : 'Listing')}</div>
+        <div class="conv-preview">${esc(m.content)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.conversation-row').forEach(row=>row.addEventListener('click', async ()=>{
+    const listingId = row.dataset.listing;
+    const renterId = row.dataset.renter;
+    let listing = listings.find(x=>x.id===listingId) || myListings.find(x=>x.id===listingId);
+    if(!listing){
+      const { data } = await sb.from('listings').select('*').eq('id', listingId).maybeSingle();
+      listing = data;
+    }
+    if(listing) openChatThread(listing, renterId);
+  }));
+}
 function renderMyListings(){
   mainEl.innerHTML = `
     <div class="hero fade-in">
@@ -2010,12 +2179,10 @@ async function loadMyListings(){
     el.innerHTML = `<div class="empty">${iconSvg('home')}<h3>You haven't listed anything yet</h3><p>Head to "List a Room" to add your first one.</p></div>`;
     return;
   }
-  const owedMap = await fetchLandlordOwedSummary(myListings.map(l=>l.id));
   el.innerHTML = myListings.map(l=>{
     const boosted = isBoosted(l);
     const total = l.total_rooms || 1;
     const avail = l.available_rooms != null ? l.available_rooms : total;
-    const owed = owedMap[l.id] || 0;
     return `
     <div class="rental-card">
       <h3>${esc(l.title)}</h3>
@@ -2029,20 +2196,48 @@ async function loadMyListings(){
           <button class="btn-secondary" data-boost="${l.id}" data-days="7">Boost 7 days (${naira(BOOST_PRICE_PER_DAY*7)})</button>
         </div>
       `}
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
-        <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Landlord payout — ${esc(l.landlord_name)}</div>
-        ${owed > 0 ? `<div class="stat-card" style="margin-bottom:12px"><div class="lbl">Owed to landlord (confirmed rentals)</div><div class="val">${naira(owed)}</div></div>` : ''}
-        <div id="landlordBank-${l.id}"></div>
-        <div style="margin-top:10px">
-          <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw to landlord<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
-        </div>
-      </div>
     </div>`;
   }).join('');
   el.querySelectorAll('[data-boost]').forEach(b=>b.addEventListener('click', ()=>{
     const listing = myListings.find(x=>x.id===b.dataset.boost);
     if(listing) startBoostPayment(listing, Number(b.dataset.days));
   }));
+}
+
+/* ============ Landlord Payouts (its own page) ============ */
+function renderPayouts(){
+  mainEl.innerHTML = `
+    <div class="hero fade-in">
+      <div class="eyebrow">Landlord payouts</div>
+      <h1>Get landlords paid</h1>
+      <p>Add each landlord's bank details once — every listing tracks what's owed to them separately, with its own withdraw button.</p>
+    </div>
+    <div id="payoutsWrap" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
+  `;
+  loadPayouts();
+}
+async function loadPayouts(){
+  await fetchMyListings();
+  const el = document.getElementById('payoutsWrap');
+  if(!el) return;
+  if(!myListings.length){
+    el.innerHTML = `<div class="empty">${iconSvg('bank')}<h3>No listings yet</h3><p>Once you list a room, its landlord payout tracking will show up here.</p></div>`;
+    return;
+  }
+  const owedMap = await fetchLandlordOwedSummary(myListings.map(l=>l.id));
+  el.innerHTML = myListings.map(l=>{
+    const owed = owedMap[l.id] || 0;
+    return `
+    <div class="rental-card">
+      <h3>${esc(l.title)}</h3>
+      <div class="sub">${esc(l.location)} · Landlord: ${esc(l.landlord_name)}</div>
+      ${owed > 0 ? `<div class="stat-card" style="margin:14px 0"><div class="lbl">Owed to landlord (confirmed rentals)</div><div class="val">${naira(owed)}</div></div>` : `<p style="font-size:12.5px;color:var(--muted);margin:14px 0">Nothing owed yet — this updates once a rental on this listing is confirmed.</p>`}
+      <div id="landlordBank-${l.id}"></div>
+      <div style="margin-top:10px">
+        <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw to landlord<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
+      </div>
+    </div>`;
+  }).join('');
   myListings.forEach(l=>renderLandlordBankSection(l));
 }
 async function fetchLandlordOwedSummary(listingIds){
