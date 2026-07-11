@@ -484,8 +484,8 @@ const SUPABASE_URL = 'https://oicegvujvgfrlfbdjali.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pY2VndnVqdmdmcmxmYmRqYWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NTg4OTMsImV4cCI6MjA5OTAzNDg5M30.8IT2zqSwiL3YmeFLcLXTITKn7Q4czqkGjk_bxousi8I';
 const PAYSTACK_PUBLIC_KEY = 'pk_test_007813fd3acc3cf7ad58bf827ba95f668a99c487';
 // TODO: swap these for your real support email and WhatsApp number (with country code, no + or leading 0)
-const SUPPORT_EMAIL = 'roomlinksupport@gmail.com';
-const SUPPORT_WHATSAPP = '2348000000000';
+const SUPPORT_EMAIL = 'benjaminlana2@gmail.com';
+const SUPPORT_WHATSAPP = '2349016369638';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -2343,7 +2343,10 @@ async function loadDashboardData(){
     </div>`;
   }).join('');
   el.querySelectorAll('[data-confirm]').forEach(b=>b.addEventListener('click', ()=>confirmMoveIn(b.dataset.confirm)));
-  el.querySelectorAll('[data-dispute]').forEach(b=>b.addEventListener('click', ()=>disputeRental(b.dataset.dispute)));
+  el.querySelectorAll('[data-dispute]').forEach(b=>b.addEventListener('click', ()=>{
+    const t = myTransactions.find(x=>x.id===b.dataset.dispute);
+    if(t) openDisputeForm(t);
+  }));
   myTransactions.forEach(t=>{
     if(t.status==='confirmed' && !reviewedIds.has(t.id)) renderReviewPrompt(t);
   });
@@ -2384,6 +2387,125 @@ function renderReviewPrompt(transaction){
     });
   });
 }
+const DISPUTE_CATEGORIES = [
+  'Room not as described in photos',
+  'Landlord unreachable or unresponsive',
+  'Security concerns',
+  'No water supply',
+  'No electricity or faulty wiring',
+  'Room already occupied by someone else',
+  'Wrong location',
+  'Landlord requesting extra unlisted payment',
+  'Other',
+];
+function openDisputeForm(transaction){
+  const li = transaction.listings || {};
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:4px">Raise a dispute</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">${esc(li.title||'This rental')} · ${naira(transaction.amount)}</p>
+      <form id="disputeForm">
+        <div class="field">
+          <label>What went wrong?</label>
+          <select name="category" required>
+            <option value="" disabled selected>Select a reason</option>
+            ${DISPUTE_CATEGORIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Tell us what happened</label>
+          <textarea name="description" required maxlength="600" placeholder="A few details help us review this faster"></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="disputeSubmitBtn">Submit dispute</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  document.getElementById('disputeForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const submitBtn = document.getElementById('disputeSubmitBtn');
+    submitBtn.disabled = true;
+    try{
+      await sb.from('disputes').insert({
+        transaction_id: transaction.id, renter_id: session.user.id, listing_id: transaction.listing_id,
+        category: fd.get('category'), description: fd.get('description').trim(), refund_amount: transaction.amount,
+      });
+      await sb.from('transactions').update({ status:'disputed' }).eq('id', transaction.id);
+      showDisputeConfirmation(transaction, fd.get('category'), fd.get('description').trim());
+    }catch(err){
+      showToast('Could not submit dispute: ' + (err.message||'try again'));
+      submitBtn.disabled = false;
+    }
+  });
+}
+function showDisputeConfirmation(transaction, category, description){
+  const li = transaction.listings || {};
+  const sheet = document.getElementById('sheet');
+  const mailBody = `Dispute details:\n\nListing: ${li.title||''}\nAmount paid: ${naira(transaction.amount)}\nReason: ${category}\nDescription: ${description}\n\n(Sent from RoomLink)`;
+  const mailLink = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('RoomLink dispute — ' + (li.title||'rental'))}&body=${encodeURIComponent(mailBody)}`;
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+      </div>
+      <h2>Dispute logged</h2>
+      <p>Your ${naira(transaction.amount)} refund request has been recorded and RoomLink will review it. This isn't instant — it's reviewed and processed by a real person, so add your payout details below and we'll reach out.</p>
+      <a href="${mailLink}" class="btn-secondary btn-full" style="margin-top:16px">${iconSvg('mail','width="16" height="16"')}Email us the details directly</a>
+      <div style="width:100%;margin-top:18px;text-align:left" id="refundBankSection"></div>
+      <button class="btn-text" id="disputeDone" style="margin-top:14px">Done</button>
+    </div>
+  `;
+  document.getElementById('disputeDone').addEventListener('click', ()=>{ closeDetail(); loadDashboardData(); });
+  renderRefundBankSection();
+}
+let editingRefundBank = false;
+function renderRefundBankSection(){
+  const el = document.getElementById('refundBankSection');
+  if(!el) return;
+  const hasDetails = profile && profile.bank_name && profile.bank_account_name && profile.bank_account_number;
+  if(hasDetails && !editingRefundBank){
+    el.innerHTML = `
+      <div class="stat-card" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Bank</span><strong style="font-size:13.5px">${esc(profile.bank_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account name</span><strong style="font-size:13.5px">${esc(profile.bank_account_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account number</span><strong style="font-size:13.5px">${esc(profile.bank_account_number)}</strong></div>
+      </div>
+      <button class="btn-secondary" id="editRefundBankBtn" style="margin-top:10px">${iconSvg('reply','width="14" height="14"')}Edit</button>
+    `;
+    document.getElementById('editRefundBankBtn').addEventListener('click', ()=>{ editingRefundBank = true; renderRefundBankSection(); });
+  } else {
+    el.innerHTML = `
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:8px">Where should your refund go?</label>
+      <form id="refundBankForm">
+        <div class="field"><label>Bank name</label><input name="bankName" value="${esc(profile && profile.bank_name || '')}" placeholder="e.g. GTBank"/></div>
+        <div class="field-row">
+          <div class="field"><label>Account name</label><input name="acctName" value="${esc(profile && profile.bank_account_name || '')}" placeholder="Name on account"/></div>
+          <div class="field"><label>Account number</label><input name="acctNumber" value="${esc(profile && profile.bank_account_number || '')}" placeholder="10-digit number"/></div>
+        </div>
+        <button type="submit" class="btn-secondary">Save payout details</button>
+      </form>
+    `;
+    document.getElementById('refundBankForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try{
+        await sb.from('profiles').update({
+          bank_name: fd.get('bankName'), bank_account_name: fd.get('acctName'), bank_account_number: fd.get('acctNumber'),
+        }).eq('id', session.user.id);
+        profile.bank_name = fd.get('bankName');
+        profile.bank_account_name = fd.get('acctName');
+        profile.bank_account_number = fd.get('acctNumber');
+        editingRefundBank = false;
+        renderRefundBankSection();
+        showToast('Payout details saved.');
+      }catch(err){ showToast('Could not save: ' + (err.message||'try again')); }
+    });
+  }
+}
 async function confirmMoveIn(transactionId){
   try{
     await sb.from('transactions').update({ status:'confirmed', confirmed_at: new Date().toISOString() }).eq('id', transactionId);
@@ -2391,13 +2513,7 @@ async function confirmMoveIn(transactionId){
     await loadDashboardData();
   }catch(err){ showToast('Could not confirm: ' + (err.message||'try again')); }
 }
-async function disputeRental(transactionId){
-  try{
-    await sb.from('transactions').update({ status:'disputed' }).eq('id', transactionId);
-    showToast('Dispute raised — RoomLink will reach out.');
-    await loadDashboardData();
-  }catch(err){ showToast('Could not raise dispute: ' + (err.message||'try again')); }
-}
+
 
 /* ============ Affiliate dashboard ============ */
 function renderAffiliate(){
