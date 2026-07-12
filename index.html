@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RoomLink — Student Accommodation Finder</title>
+<title>RoomLink  Student Accommodation Finder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -457,6 +457,7 @@
         <div class="brand-name">RoomLink</div>
       </div>
       <div class="top-actions">
+        <div id="messagesBtnWrap"></div>
         <div id="notifBtnWrap"></div>
         <button class="icon-btn" id="themeToggle" title="Toggle dark mode"></button>
         <div id="authBtnWrap"></div>
@@ -555,12 +556,33 @@ let darkMode = localStorage.getItem('rl-theme') === 'dark';
 let authMode = 'login'; // login | signup | forgot
 let pendingRentListing = null;
 
-/* Capture referral code from URL */
+/* Capture referral code from URL — this is just a bridge for visitors who
+   aren't logged in yet. Once they're logged in, tryPersistReferral() moves
+   it onto their account permanently, which is what actually gets used. */
 (function captureRef(){
   const params = new URLSearchParams(window.location.search);
   const ref = params.get('ref');
   if(ref) localStorage.setItem('rl_ref_code', ref.toUpperCase());
 })();
+
+// Moves a pending referral code from localStorage onto the logged-in user's
+// account (profiles.referred_by) — a one-time, permanent attribution that
+// survives across devices/browsers, consumed the moment they complete their
+// first rental (see handleRentSuccess).
+async function tryPersistReferral(){
+  if(!session || !profile) return;
+  if(profile.referred_by) { localStorage.removeItem('rl_ref_code'); return; } // already has one — first referral always wins
+  const refCode = localStorage.getItem('rl_ref_code');
+  if(!refCode) return;
+  try{
+    const { data: affId } = await sb.rpc('lookup_affiliate_id', { code: refCode });
+    if(affId && affId !== session.user.id){
+      await sb.from('profiles').update({ referred_by: affId }).eq('id', session.user.id);
+      profile.referred_by = affId;
+    }
+  }catch(err){ console.error('referral persist failed', err); }
+  localStorage.removeItem('rl_ref_code');
+}
 
 /* ============ Theme ============ */
 function applyTheme(){
@@ -582,7 +604,6 @@ function tabList(){
   ];
   if(session){
     base.push({id:'mylistings', label:'My Listings'});
-    base.push({id:'messages', label:'Messages'});
     base.push({id:'dashboard', label:'My Rentals'});
     if(profile && profile.is_affiliate) base.push({id:'affiliate', label:'Affiliate'});
   }
@@ -592,7 +613,7 @@ function renderTabs(){
   const el = document.getElementById('tabs');
   el.innerHTML = tabList().map(t=>`<button data-view="${t.id}" class="${view===t.id?'active':''}">${esc(t.label)}</button>`).join('');
   el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
-    if((b.dataset.view==='dashboard' || b.dataset.view==='affiliate' || b.dataset.view==='list' || b.dataset.view==='mylistings' || b.dataset.view==='messages') && !session){
+    if((b.dataset.view==='dashboard' || b.dataset.view==='affiliate' || b.dataset.view==='list' || b.dataset.view==='mylistings') && !session){
       openAuth('login'); return;
     }
     view = b.dataset.view; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
@@ -639,6 +660,15 @@ function renderNotifBtn(){
   if(!session){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = `<button class="icon-btn notif-btn" id="notifBtn" title="Notifications">${iconSvg('bell')}${unreadCount > 0 ? '<span class="notif-dot"></span>' : ''}</button>`;
   document.getElementById('notifBtn').addEventListener('click', openNotifications);
+}
+function renderMessagesBtn(){
+  const wrap = document.getElementById('messagesBtnWrap');
+  if(!wrap) return;
+  if(!session){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<button class="icon-btn" id="messagesBtn" title="Messages">${iconSvg('message')}</button>`;
+  document.getElementById('messagesBtn').addEventListener('click', ()=>{
+    view='messages'; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  });
 }
 function timeAgo(dateStr){
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -1258,7 +1288,7 @@ function openAccountMenu(){
   document.getElementById('signOutBtn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
     session=null; profile=null; notifications=[]; unreadCount=0; view='browse'; lastHandledUserId=null;
-    closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn();
+    closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn(); renderMessagesBtn();
     showToast('Logged out.');
   });
 }
@@ -1289,8 +1319,10 @@ sb.auth.onAuthStateChange((_event, s)=>{
 async function handleSignedIn(){
   await refreshSession();
   renderAccountButton();
+  await tryPersistReferral();
   await fetchNotifications();
   renderNotifBtn();
+  renderMessagesBtn();
   const firstName = (profile && profile.full_name || '').trim().split(' ')[0];
   showToast(firstName ? `Welcome back, ${firstName}!` : 'Welcome back!');
   view='browse'; renderAll();
@@ -1783,7 +1815,7 @@ function renderListForm(){
 function openDetail(id){
   const l = listings.find(x=>x.id===id);
   if(!l) return;
-  const previewHasAffiliate = !!localStorage.getItem('rl_ref_code');
+  const previewHasAffiliate = !!(profile && profile.referred_by);
   const { landlord, affiliate, company } = computeSplit(l.price, previewHasAffiliate);
   const photos = l.photo_urls && l.photo_urls.length ? l.photo_urls : [];
   const cover = photos[0] || null;
@@ -2042,12 +2074,12 @@ async function handleRentSuccess(listing, ref){
   // verify-transaction endpoint before trusting it. This prototype trusts the
   // client-side callback, which is fine for a course demo but not for real money.
   try{
-    const refCode = localStorage.getItem('rl_ref_code');
+    // Referral now lives on the account (profile.referred_by), not localStorage —
+    // set once by tryPersistReferral(), and cleared right below the moment it's
+    // used, so it can only ever credit an affiliate on someone's FIRST rental.
     let affiliateId = null;
-    if(refCode){
-      const { data: aff } = await sb.from('profiles').select('id').eq('affiliate_code', refCode).maybeSingle();
-      // Block self-referral: not the renter themselves, and not the person who listed this room.
-      if(aff && aff.id !== session.user.id && aff.id !== listing.lister_id) affiliateId = aff.id;
+    if(profile && profile.referred_by && profile.referred_by !== session.user.id && profile.referred_by !== listing.lister_id){
+      affiliateId = profile.referred_by;
     }
     const { landlord, affiliate, company } = computeSplit(listing.price, !!affiliateId);
     await sb.from('transactions').insert({
@@ -2055,6 +2087,12 @@ async function handleRentSuccess(listing, ref){
       amount: listing.price, landlord_payout: landlord, affiliate_payout: affiliate, company_payout: company,
       status: 'paid', paystack_ref: ref,
     });
+    if(affiliateId){
+      // One-time use — clear it so no future rental by this account ever credits
+      // the affiliate again.
+      await sb.from('profiles').update({ referred_by: null }).eq('id', session.user.id);
+      profile.referred_by = null;
+    }
     // Atomically take one room off the count — only flips the listing to
     // 'rented' (and hides it from Browse) once the last room is gone.
     const { data: remaining, error: decErr } = await sb.rpc('decrement_room', { listing_id_input: listing.id });
@@ -2676,8 +2714,10 @@ function renderCommission(){
   wireFooter();
   await refreshSession();
   renderAccountButton();
+  await tryPersistReferral();
   await fetchNotifications();
   renderNotifBtn();
+  renderMessagesBtn();
   await fetchListings();
   renderAll();
 })();
