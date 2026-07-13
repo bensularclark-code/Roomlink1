@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RoomLink  Student Accommodation Finder</title>
+<title>RoomLink — Student Accommodation Finder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -457,6 +457,7 @@
         <div class="brand-name">RoomLink</div>
       </div>
       <div class="top-actions">
+        <div id="withdrawalBtnWrap"></div>
         <div id="messagesBtnWrap"></div>
         <div id="notifBtnWrap"></div>
         <button class="icon-btn" id="themeToggle" title="Toggle dark mode"></button>
@@ -485,7 +486,7 @@ const SUPABASE_URL = 'https://oicegvujvgfrlfbdjali.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pY2VndnVqdmdmcmxmYmRqYWxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NTg4OTMsImV4cCI6MjA5OTAzNDg5M30.8IT2zqSwiL3YmeFLcLXTITKn7Q4czqkGjk_bxousi8I';
 const PAYSTACK_PUBLIC_KEY = 'pk_test_007813fd3acc3cf7ad58bf827ba95f668a99c487';
 // TODO: swap these for your real support email and WhatsApp number (with country code, no + or leading 0)
-const SUPPORT_EMAIL = 'benjaminlana2@gmail.com';
+const SUPPORT_EMAIL = 'hello.roomlink@gmail.com';
 const SUPPORT_WHATSAPP = '2349016369638';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -670,6 +671,15 @@ function renderMessagesBtn(){
     view='messages'; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
   });
 }
+function renderWithdrawalBtn(){
+  const wrap = document.getElementById('withdrawalBtnWrap');
+  if(!wrap) return;
+  if(!session){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<button class="icon-btn" id="withdrawalBtn" title="Withdrawal">${iconSvg('wallet')}</button>`;
+  document.getElementById('withdrawalBtn').addEventListener('click', ()=>{
+    view='withdrawal'; renderAll(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+}
 function timeAgo(dateStr){
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
   if(diff < 60) return 'just now';
@@ -789,6 +799,7 @@ function showRentPaidPopup(listing, remaining){
   const overlay = document.getElementById('overlay');
   const sheet = document.getElementById('sheet');
   overlay.classList.add('center-modal');
+  const contact = contactFor(listing);
   const remainingNote = remaining > 0
     ? `${remaining} room${remaining!==1?'s':''} still left on this listing.`
     : `That was the last room — it's now off Browse.`;
@@ -800,13 +811,13 @@ function showRentPaidPopup(listing, remaining){
       <h2>Rent paid!</h2>
       <p>Your payment is confirmed and held safely with RoomLink. ${remainingNote}</p>
       <div class="landlord-box" style="width:100%;margin-top:18px;text-align:left">
-        <div class="label">Landlord contact</div>
+        <div class="label">${esc(contact.role)} contact</div>
         <div class="landlord-revealed">
-          <div class="av">${esc((listing.landlord_name||'L').charAt(0))}</div>
-          <div><strong>${esc(listing.landlord_name)}</strong><span>${esc(listing.landlord_phone)}</span></div>
+          <div class="av">${esc((contact.name||'?').charAt(0))}</div>
+          <div><strong>${esc(contact.name)}</strong><span>${esc(contact.phone)}</span></div>
         </div>
       </div>
-      <a href="tel:${esc(listing.landlord_phone)}" class="btn-primary btn-full" style="margin-top:16px">${iconSvg('phone','width="16" height="16"')}Call Landlord</a>
+      <a href="tel:${esc(contact.phone)}" class="btn-primary btn-full" style="margin-top:16px">${iconSvg('phone','width="16" height="16"')}Call ${esc(contact.role)}</a>
       <button class="btn-text" id="rentPaidContinue" style="margin-top:14px">Continue to My Rentals</button>
     </div>
   `;
@@ -1245,7 +1256,9 @@ function wireAuthSheet(){
         msgEl.innerHTML = `<div class="auth-success">Reset link sent — check your email.</div>`;
       }
     }catch(err){
-      msgEl.innerHTML = `<div class="auth-error">${esc(err.message || 'Something went wrong. Try again.')}</div>`;
+      console.error('Auth error:', err);
+      const friendly = (err && err.message && err.message !== '{}' && err.message.trim()) ? err.message : 'Something went wrong — please try again, or check your connection.';
+      msgEl.innerHTML = `<div class="auth-error">${esc(friendly)}</div>`;
     }
     submitBtn.disabled = false;
   });
@@ -1288,7 +1301,7 @@ function openAccountMenu(){
   document.getElementById('signOutBtn').addEventListener('click', async ()=>{
     await sb.auth.signOut();
     session=null; profile=null; notifications=[]; unreadCount=0; view='browse'; lastHandledUserId=null;
-    closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn(); renderMessagesBtn();
+    closeDetail(); renderAll(); renderAccountButton(); renderNotifBtn(); renderMessagesBtn(); renderWithdrawalBtn();
     showToast('Logged out.');
   });
 }
@@ -1323,6 +1336,7 @@ async function handleSignedIn(){
   await fetchNotifications();
   renderNotifBtn();
   renderMessagesBtn();
+  renderWithdrawalBtn();
   const firstName = (profile && profile.full_name || '').trim().split(' ')[0];
   showToast(firstName ? `Welcome back, ${firstName}!` : 'Welcome back!');
   view='browse'; renderAll();
@@ -1333,6 +1347,14 @@ async function handleSignedIn(){
 
 /* ============ Data: listings ============ */
 function isBoosted(l){ return !!(l.boosted_until && new Date(l.boosted_until) > new Date()); }
+// When a listing was posted by an agent, the agent is the point of contact —
+// not the landlord — for messaging and for the post-payment phone reveal.
+function contactFor(listing){
+  if(listing.lister_type === 'agent' && listing.agent_name){
+    return { name: listing.agent_name, phone: listing.agent_phone, role: 'Agent' };
+  }
+  return { name: listing.landlord_name, phone: listing.landlord_phone, role: 'Landlord' };
+}
 let likesMap = {}; // { [listingId]: { count, likedByMe } }
 async function fetchLikesForListings(listingIds){
   likesMap = {};
@@ -1472,6 +1494,7 @@ function renderAll(){
   else if(view==='dashboard') renderDashboard();
   else if(view==='affiliate') renderAffiliate();
   else if(view==='mylistings') renderMyListings();
+  else if(view==='withdrawal') renderWithdrawal();
   else if(view==='messages') renderMessagesInbox();
 }
 
@@ -1710,59 +1733,75 @@ function listingCard(l){
 function emptyHtml(){ return `<div class="empty" style="grid-column:1/-1">${iconSvg('search')}<h3>No rooms match these filters</h3><p>Try widening your budget or clearing a filter.</p></div>`; }
 
 /* ============ List a room ============ */
-function renderListForm(){
+function renderListForm(existingListing){
+  const isEdit = !!existingListing;
+  const l = existingListing || {};
   mainEl.innerHTML = `
     <div class="form-wrap fade-in">
       <div class="hero">
-        <div class="eyebrow">List a room</div>
-        <h1>Know a room that's opening up?</h1>
-        <p>List it here. If a student rents through RoomLink, the referring student earns a 5% share once they confirm move-in.${profile && profile.is_affiliate ? ' Note: referral commission doesn\'t apply to your own listings — that share goes to RoomLink instead.' : ''}</p>
+        <div class="eyebrow">${isEdit ? 'Edit listing' : 'List a room'}</div>
+        <h1>${isEdit ? 'Update your listing' : "Know a room that's opening up?"}</h1>
+        <p>${isEdit ? 'Changes go live immediately.' : `List it here. If a student rents through RoomLink, the referring student earns a 5% share once they confirm move-in.${profile && profile.is_affiliate ? ' Note: referral commission doesn\'t apply to your own listings — that share goes to RoomLink instead.' : ''}`}</p>
       </div>
       <form id="listForm">
         <div class="field">
           <label>Room type</label>
           <div class="category-pick" id="roomTypePick">
-            ${ROOM_TYPES.map((t,i)=>`<button type="button" data-rt="${t.id}" class="${i===0?'active':''}">${t.label}</button>`).join('')}
+            ${ROOM_TYPES.map((t)=>`<button type="button" data-rt="${t.id}" class="${(isEdit ? l.room_type===t.id : t.id===ROOM_TYPES[0].id)?'active':''}">${t.label}</button>`).join('')}
           </div>
         </div>
-        <div class="field"><label>Listing title</label><input name="title" required placeholder="e.g. Self-contain near school gate"/></div>
+        <div class="field"><label>Listing title</label><input name="title" required value="${esc(l.title||'')}" placeholder="e.g. Self-contain near school gate"/></div>
         <div class="field-row">
-          <div class="field"><label>Price per room / year (\u20a6)</label><input name="price" type="number" required placeholder="e.g. 120000"/></div>
-          <div class="field"><label>Number of rooms available</label><input name="totalRooms" type="number" min="1" value="1" required placeholder="e.g. 8"/><div class="hint">Leave as 1 for a single room. For a shared building with several identical slots, enter the total.</div></div>
+          <div class="field"><label>Price per room / year (\u20a6)</label><input name="price" type="number" required value="${l.price||''}" placeholder="e.g. 120000"/></div>
+          <div class="field"><label>Number of rooms available</label><input name="totalRooms" type="number" min="1" value="${l.total_rooms||1}" required placeholder="e.g. 8"/><div class="hint">Leave as 1 for a single room. For a shared building with several identical slots, enter the total.</div></div>
         </div>
-        <div class="field"><label>Location / area</label><input name="location" required placeholder="e.g. Behind School Gate"/></div>
-        <div class="field"><label>Description</label><textarea name="description" required placeholder="Condition, facilities, when it's available from"></textarea></div>
+        <div class="field"><label>Location / area</label><input name="location" required value="${esc(l.location||'')}" placeholder="e.g. Behind School Gate"/></div>
+        <div class="field"><label>Description</label><textarea name="description" required placeholder="Condition, facilities, when it's available from">${esc(l.description||'')}</textarea></div>
         <div class="field">
           <label>Amenities</label>
           <div class="category-pick" id="amenitiesPick" style="grid-template-columns:repeat(2,1fr)">
-            ${AMENITIES.map(a=>`<button type="button" data-amenity="${esc(a)}">${esc(a)}</button>`).join('')}
+            ${AMENITIES.map(a=>`<button type="button" data-amenity="${esc(a)}" class="${(l.amenities||[]).includes(a)?'active':''}">${esc(a)}</button>`).join('')}
           </div>
         </div>
         <div class="field">
           <label>Photos</label>
           <input type="file" id="photoInput" accept="image/*" multiple/>
-          <div class="hint">Up to 5 photos of the room and amenities. First photo becomes the cover image.</div>
-          <div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+          <div class="hint">Up to 5 photos of the room and amenities. First photo becomes the cover image.${isEdit ? ' Choosing new photos replaces the current ones.' : ''}</div>
+          <div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${(l.photo_urls||[]).map(u=>`<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid var(--line)"><img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover"/></div>`).join('')}</div>
         </div>
         <div class="field">
           <label>Are you listing as the landlord, or as an agent?</label>
           <div class="category-pick" id="listerTypePick" style="grid-template-columns:repeat(2,1fr)">
-            <button type="button" data-lt="landlord" class="active">I'm the landlord</button>
-            <button type="button" data-lt="agent">I'm an agent</button>
+            <button type="button" data-lt="landlord" class="${(l.lister_type||'landlord')==='landlord'?'active':''}">I'm the landlord</button>
+            <button type="button" data-lt="agent" class="${l.lister_type==='agent'?'active':''}">I'm an agent</button>
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Landlord name</label><input name="landlordName" required placeholder="e.g. Mr. Adeyemi"/></div>
-          <div class="field"><label>Landlord phone</label><input name="landlordPhone" required placeholder="e.g. 080xx-xxx-xxx"/></div>
+          <div class="field"><label>Landlord name</label><input name="landlordName" required value="${esc(l.landlord_name||'')}" placeholder="e.g. Mr. Adeyemi"/></div>
+          <div class="field"><label>Landlord phone</label><input name="landlordPhone" required value="${esc(l.landlord_phone||'')}" placeholder="e.g. 080xx-xxx-xxx"/></div>
         </div>
-        <button type="submit" class="btn-primary btn-full" id="listSubmitBtn">${iconSvg('arrowRight','width="17" height="17"')}Submit listing</button>
+        <div class="field-row" id="agentFieldsWrap" style="display:${l.lister_type==='agent'?'flex':'none'}">
+          <div class="field"><label>Agent name</label><input name="agentName" value="${esc(l.agent_name||'')}" placeholder="Your name"/></div>
+          <div class="field"><label>Agent phone</label><input name="agentPhone" value="${esc(l.agent_phone||'')}" placeholder="Your phone number"/></div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="listSubmitBtn">${iconSvg('arrowRight','width="17" height="17"')}${isEdit ? 'Save changes' : 'Submit listing'}</button>
       </form>
     </div>
   `;
-  let currentListerType = 'landlord';
-  let currentRT = ROOM_TYPES[0].id;
-  let selectedAmenities = new Set();
+  let currentListerType = l.lister_type || 'landlord';
+  let currentRT = l.room_type || ROOM_TYPES[0].id;
+  let selectedAmenities = new Set(l.amenities || []);
   let selectedFiles = [];
+  const agentFieldsWrap = mainEl.querySelector('#agentFieldsWrap');
+  const agentNameInput = mainEl.querySelector('[name="agentName"]');
+  const agentPhoneInput = mainEl.querySelector('[name="agentPhone"]');
+  function syncAgentFieldsRequired(){
+    const isAgent = currentListerType === 'agent';
+    agentFieldsWrap.style.display = isAgent ? 'flex' : 'none';
+    if(agentNameInput) agentNameInput.required = isAgent;
+    if(agentPhoneInput) agentPhoneInput.required = isAgent;
+  }
+  syncAgentFieldsRequired();
   mainEl.querySelectorAll('#roomTypePick button').forEach(b=>b.addEventListener('click', ()=>{
     currentRT = b.dataset.rt;
     mainEl.querySelectorAll('#roomTypePick button').forEach(x=>x.classList.remove('active'));
@@ -1772,6 +1811,7 @@ function renderListForm(){
     currentListerType = b.dataset.lt;
     mainEl.querySelectorAll('#listerTypePick button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
+    syncAgentFieldsRequired();
   }));
   mainEl.querySelectorAll('#amenitiesPick button').forEach(b=>b.addEventListener('click', ()=>{
     const a = b.dataset.amenity;
@@ -1789,24 +1829,32 @@ function renderListForm(){
     const fd = new FormData(e.target);
     const submitBtn = document.getElementById('listSubmitBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading...';
+    submitBtn.textContent = 'Saving...';
     try{
-      const photoUrls = await uploadListingPhotos(selectedFiles);
+      const photoUrls = selectedFiles.length ? await uploadListingPhotos(selectedFiles) : (l.photo_urls || []);
       const totalRooms = Math.max(1, Number(fd.get('totalRooms')) || 1);
-      await createListing({
+      const payload = {
         title: fd.get('title').trim(), room_type: currentRT, price: Number(fd.get('price')),
         location: fd.get('location').trim(), description: fd.get('description').trim(),
         landlord_name: fd.get('landlordName').trim(), landlord_phone: fd.get('landlordPhone').trim(),
-        amenities: Array.from(selectedAmenities), photo_urls: photoUrls,
-        total_rooms: totalRooms, available_rooms: totalRooms, lister_type: currentListerType,
-      });
-      showToast('Listing submitted — now live for students to browse.');
+        agent_name: currentListerType==='agent' ? fd.get('agentName').trim() : null,
+        agent_phone: currentListerType==='agent' ? fd.get('agentPhone').trim() : null,
+        amenities: Array.from(selectedAmenities), photo_urls: photoUrls, lister_type: currentListerType,
+      };
+      if(isEdit){
+        const { error } = await sb.from('listings').update(payload).eq('id', existingListing.id);
+        if(error) throw error;
+        showToast('Listing updated.');
+      } else {
+        await createListing({ ...payload, total_rooms: totalRooms, available_rooms: totalRooms });
+        showToast('Listing submitted — now live for students to browse.');
+      }
       await fetchListings();
-      view='browse'; renderAll();
+      view = isEdit ? 'mylistings' : 'browse'; renderAll();
     }catch(err){
-      showToast('Could not submit: ' + (err.message||'try again'));
+      showToast('Could not save: ' + (err.message||'try again'));
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `${iconSvg('arrowRight','width="17" height="17"')}Submit listing`;
+      submitBtn.innerHTML = `${iconSvg('arrowRight','width="17" height="17"')}${isEdit ? 'Save changes' : 'Submit listing'}`;
     }
   });
 }
@@ -1856,7 +1904,7 @@ function openDetail(id){
         <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Log in to leave a comment.</p>`}
       </div>
       <div class="sheet-actions" style="flex-wrap:wrap">
-        ${session && l.lister_id !== session.user.id ? `<button class="btn-secondary" id="messageLandlordBtn" style="flex:1">${iconSvg('message','width="16" height="16"')}Message Landlord</button>` : ''}
+        ${session && l.lister_id !== session.user.id ? `<button class="btn-secondary" id="messageLandlordBtn" style="flex:1">${iconSvg('message','width="16" height="16"')}Message ${l.lister_type==='agent' ? 'Agent' : 'Landlord'}</button>` : ''}
         <button class="btn-primary btn-full" id="rentBtn" style="flex:1">${iconSvg('handshake','width="17" height="17"')}Pay rent &amp; connect</button>
       </div>
     </div>
@@ -1995,7 +2043,7 @@ async function openChatThread(listing, renterId){
     <div class="sheet-content" style="padding-top:24px">
       <button class="close-x" id="closeSheet" style="position:static;margin-bottom:12px">${iconSvg('arrowRight')}</button>
       <h2 style="margin-bottom:4px">${esc(listing.title)}</h2>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">${isLister ? 'Chatting with a prospective renter' : `Chatting with ${esc(listing.landlord_name || 'the lister')}`}</p>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">${isLister ? 'Chatting with a prospective renter' : `Chatting with ${esc(contactFor(listing).name || 'the lister')}`}</p>
       <div class="commission-note" style="margin-bottom:14px">${iconSvg('shield')}<span>For your safety, phone numbers, links, and requests to pay off-platform are automatically blocked here.</span></div>
       <div id="chatBlockedNote"></div>
       <div class="chat-thread" id="chatThread"><div class="empty" style="padding:20px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading...</h3></div></div>
@@ -2234,49 +2282,96 @@ async function loadMyListings(){
           <button class="btn-secondary" data-boost="${l.id}" data-days="7">Boost 7 days (${naira(BOOST_PRICE_PER_DAY*7)})</button>
         </div>
       `}
+      <div class="rental-actions" style="margin-top:10px">
+        <button class="btn-secondary" data-edit="${l.id}">${iconSvg('reply','width="14" height="14"')}Edit</button>
+        <button class="dispute-link" data-delete="${l.id}">Delete listing</button>
+      </div>
     </div>`;
   }).join('');
   el.querySelectorAll('[data-boost]').forEach(b=>b.addEventListener('click', ()=>{
     const listing = myListings.find(x=>x.id===b.dataset.boost);
     if(listing) startBoostPayment(listing, Number(b.dataset.days));
   }));
+  el.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>{
+    const listing = myListings.find(x=>x.id===b.dataset.edit);
+    if(listing){ view='list'; renderListForm(listing); window.scrollTo({top:0,behavior:'smooth'}); }
+  }));
+  el.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click', ()=>confirmDeleteListing(b.dataset.delete)));
+}
+function confirmDeleteListing(listingId){
+  const listing = myListings.find(x=>x.id===listingId);
+  if(!listing) return;
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  overlay.classList.add('center-modal');
+  sheet.innerHTML = `
+    <div class="welcome-wrap">
+      <div class="welcome-circle" style="background:none;border:2px solid var(--danger)"><span style="color:var(--danger);font-size:28px;font-weight:800">!</span></div>
+      <h2>Delete this listing?</h2>
+      <p>"${esc(listing.title)}" will be removed from Browse permanently. This can't be undone.</p>
+      <button class="btn-primary" id="confirmDeleteBtn" style="margin-top:20px;background:var(--danger);color:#fff">Yes, delete it</button>
+      <button class="btn-text" id="cancelDeleteBtn" style="margin-top:12px">Cancel</button>
+    </div>
+  `;
+  overlay.classList.add('open');
+  document.getElementById('cancelDeleteBtn').addEventListener('click', closeDetail);
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async ()=>{
+    try{
+      await sb.from('listings').delete().eq('id', listingId);
+      closeDetail();
+      showToast('Listing deleted.');
+      await loadMyListings();
+    }catch(err){ showToast('Could not delete: ' + (err.message||'try again')); }
+  });
 }
 
-/* ============ Landlord Payouts (its own page) ============ */
-function renderPayouts(){
+/* ============ Withdrawal (aggregated across all listings, own header button) ============ */
+function renderWithdrawal(){
   mainEl.innerHTML = `
     <div class="hero fade-in">
-      <div class="eyebrow">Landlord payouts</div>
-      <h1>Get landlords paid</h1>
-      <p>Add each landlord's bank details once — every listing tracks what's owed to them separately, with its own withdraw button.</p>
+      <div class="eyebrow">Withdrawal</div>
+      <h1>Get paid</h1>
+      <p>Everything owed to you across all your listings, added up in one place.</p>
     </div>
-    <div id="payoutsWrap" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
+    <div id="withdrawalWrap" class="fade-in"><div class="empty">${iconSvg('spark')}<h3>Loading...</h3></div></div>
   `;
-  loadPayouts();
+  loadWithdrawal();
 }
-async function loadPayouts(){
+async function loadWithdrawal(){
   await fetchMyListings();
-  const el = document.getElementById('payoutsWrap');
+  const el = document.getElementById('withdrawalWrap');
   if(!el) return;
   if(!myListings.length){
-    el.innerHTML = `<div class="empty">${iconSvg('bank')}<h3>No listings yet</h3><p>Once you list a room, its landlord payout tracking will show up here.</p></div>`;
+    el.innerHTML = `<div class="empty">${iconSvg('bank')}<h3>No listings yet</h3><p>Once you list a room and a rental is confirmed, what's owed to you shows up here.</p></div>`;
     return;
   }
   const owedMap = await fetchLandlordOwedSummary(myListings.map(l=>l.id));
-  el.innerHTML = myListings.map(l=>{
-    const owed = owedMap[l.id] || 0;
-    return `
-    <div class="rental-card">
-      <h3>${esc(l.title)}</h3>
-      <div class="sub">${esc(l.location)} · Landlord: ${esc(l.landlord_name)}</div>
-      ${owed > 0 ? `<div class="stat-card" style="margin:14px 0"><div class="lbl">Owed to landlord (confirmed rentals)</div><div class="val">${naira(owed)}</div></div>` : `<p style="font-size:12.5px;color:var(--muted);margin:14px 0">Nothing owed yet — this updates once a rental on this listing is confirmed.</p>`}
-      <div id="landlordBank-${l.id}"></div>
-      <div style="margin-top:10px">
-        <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw to landlord<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
-      </div>
-    </div>`;
-  }).join('');
-  myListings.forEach(l=>renderLandlordBankSection(l));
+  const total = Object.values(owedMap).reduce((s,v)=>s+v, 0);
+  const breakdown = myListings.filter(l=>owedMap[l.id] > 0);
+  el.innerHTML = `
+    <div class="stat-card" style="margin-bottom:20px">
+      <div class="lbl">Total owed to you (confirmed rentals)</div>
+      <div class="val" style="font-size:28px">${naira(total)}</div>
+    </div>
+    ${breakdown.length ? `
+    <div style="margin-bottom:20px">
+      <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Breakdown by listing</div>
+      ${breakdown.map(l=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)">
+          <div>
+            <div style="font-size:13.5px;font-weight:700">${esc(l.title)}</div>
+            <div style="font-size:12px;color:var(--muted)">${esc(l.location)}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800">${naira(owedMap[l.id])}</div>
+        </div>
+      `).join('')}
+    </div>` : `<p style="font-size:12.5px;color:var(--muted);margin-bottom:20px">Nothing owed yet — this updates once a rental is confirmed by a renter.</p>`}
+    <div id="withdrawalBankSection"></div>
+    <div style="margin-top:14px">
+      <button type="button" class="btn-primary" disabled>${iconSvg('wallet','width="16" height="16"')}Withdraw<span class="coming-soon-tag">${iconSvg('bank','width="10" height="10"')}Coming soon</span></button>
+    </div>
+  `;
+  renderWithdrawalBankSection();
 }
 async function fetchLandlordOwedSummary(listingIds){
   if(!listingIds.length) return {};
@@ -2286,50 +2381,46 @@ async function fetchLandlordOwedSummary(listingIds){
   data.forEach(t=>{ map[t.listing_id] = (map[t.listing_id] || 0) + Number(t.landlord_payout || 0); });
   return map;
 }
-let editingLandlordBankId = null;
-function renderLandlordBankSection(listing){
-  const el = document.getElementById(`landlordBank-${listing.id}`);
+let editingWithdrawalBank = false;
+function renderWithdrawalBankSection(){
+  const el = document.getElementById('withdrawalBankSection');
   if(!el) return;
-  const hasDetails = listing.landlord_bank_name && listing.landlord_bank_account_name && listing.landlord_bank_account_number;
-  if(hasDetails && editingLandlordBankId !== listing.id){
+  const hasDetails = profile && profile.bank_name && profile.bank_account_name && profile.bank_account_number;
+  if(hasDetails && !editingWithdrawalBank){
     el.innerHTML = `
       <div class="stat-card" style="display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Bank</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_name)}</strong></div>
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account name</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_account_name)}</strong></div>
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account number</span><strong style="font-size:13.5px">${esc(listing.landlord_bank_account_number)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Bank</span><strong style="font-size:13.5px">${esc(profile.bank_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account name</span><strong style="font-size:13.5px">${esc(profile.bank_account_name)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Account number</span><strong style="font-size:13.5px">${esc(profile.bank_account_number)}</strong></div>
       </div>
-      <button class="btn-secondary" data-edit-landlord-bank="${listing.id}" style="margin-top:10px">${iconSvg('reply','width="14" height="14"')}Edit landlord's bank details</button>
+      <button class="btn-secondary" id="editWithdrawalBankBtn" style="margin-top:10px">${iconSvg('reply','width="14" height="14"')}Edit payout details</button>
     `;
-    el.querySelector('[data-edit-landlord-bank]').addEventListener('click', ()=>{ editingLandlordBankId = listing.id; renderLandlordBankSection(listing); });
+    document.getElementById('editWithdrawalBankBtn').addEventListener('click', ()=>{ editingWithdrawalBank = true; renderWithdrawalBankSection(); });
   } else {
     el.innerHTML = `
-      <form class="landlord-bank-form">
-        <div class="field"><label>Landlord's bank name</label><input name="bankName" value="${esc(listing.landlord_bank_name||'')}" placeholder="e.g. GTBank"/></div>
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:8px">Where should this go?</label>
+      <form id="withdrawalBankForm">
+        <div class="field"><label>Bank name</label><input name="bankName" value="${esc(profile && profile.bank_name || '')}" placeholder="e.g. GTBank"/></div>
         <div class="field-row">
-          <div class="field"><label>Account name</label><input name="acctName" value="${esc(listing.landlord_bank_account_name||'')}" placeholder="Name on account"/></div>
-          <div class="field"><label>Account number</label><input name="acctNumber" value="${esc(listing.landlord_bank_account_number||'')}" placeholder="10-digit number"/></div>
+          <div class="field"><label>Account name</label><input name="acctName" value="${esc(profile && profile.bank_account_name || '')}" placeholder="Name on account"/></div>
+          <div class="field"><label>Account number</label><input name="acctNumber" value="${esc(profile && profile.bank_account_number || '')}" placeholder="10-digit number"/></div>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <button type="submit" class="btn-secondary">Save landlord's bank details</button>
-          ${hasDetails ? `<button type="button" class="btn-text" data-cancel-landlord-bank>Cancel</button>` : ''}
-        </div>
+        <button type="submit" class="btn-secondary">Save payout details</button>
       </form>
     `;
-    const cancelBtn = el.querySelector('[data-cancel-landlord-bank]');
-    if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingLandlordBankId = null; renderLandlordBankSection(listing); });
-    el.querySelector('.landlord-bank-form').addEventListener('submit', async e=>{
+    document.getElementById('withdrawalBankForm').addEventListener('submit', async e=>{
       e.preventDefault();
       const fd = new FormData(e.target);
       try{
-        await sb.from('listings').update({
-          landlord_bank_name: fd.get('bankName'), landlord_bank_account_name: fd.get('acctName'), landlord_bank_account_number: fd.get('acctNumber'),
-        }).eq('id', listing.id);
-        listing.landlord_bank_name = fd.get('bankName');
-        listing.landlord_bank_account_name = fd.get('acctName');
-        listing.landlord_bank_account_number = fd.get('acctNumber');
-        editingLandlordBankId = null;
-        renderLandlordBankSection(listing);
-        showSuccessPopup('Landlord\'s payment details added!', 'These will be used to pay the landlord once rentals on this listing are confirmed.');
+        await sb.from('profiles').update({
+          bank_name: fd.get('bankName'), bank_account_name: fd.get('acctName'), bank_account_number: fd.get('acctNumber'),
+        }).eq('id', session.user.id);
+        profile.bank_name = fd.get('bankName');
+        profile.bank_account_name = fd.get('acctName');
+        profile.bank_account_number = fd.get('acctNumber');
+        editingWithdrawalBank = false;
+        renderWithdrawalBankSection();
+        showToast('Payout details saved.');
       }catch(err){ showToast('Could not save: ' + (err.message||'try again')); }
     });
   }
@@ -2718,6 +2809,7 @@ function renderCommission(){
   await fetchNotifications();
   renderNotifBtn();
   renderMessagesBtn();
+  renderWithdrawalBtn();
   await fetchListings();
   renderAll();
 })();
