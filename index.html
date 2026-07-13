@@ -4,6 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RoomLink — Student Accommodation Finder</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#F4E836">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RoomLink">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F4E836">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RoomLink">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2924,6 +2938,11 @@ function renderCommission(){
 /* ============ Init ============ */
 (async function init(){
   applyTheme();
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('/sw.js').catch(err=>console.error('Service worker registration failed', err));
+    });
+  }
   mainEl.innerHTML = `<div class="empty">${iconSvg('spark')}<h3>Loading RoomLink...</h3></div>`;
   wireFooter();
   await refreshSession();
@@ -2936,6 +2955,15 @@ function renderCommission(){
   await fetchListings();
   renderAll();
 })();
+
+// Register the service worker so the site becomes installable as an app
+// (Add to Home Screen). Registered last and quietly — never blocks the app
+// from loading if it fails for any reason (unsupported browser, etc.)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/service-worker.js').catch(err=>console.error('SW registration failed', err));
+  });
+}
 </script>
 </body>
 </html>
