@@ -129,6 +129,11 @@
   .conversation-row .conv-avatar{width:40px;height:40px;border-radius:50%;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
   .conversation-row .conv-title{font-size:13.5px;font-weight:700;}
   .conversation-row .conv-preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+  .roommate-card{display:flex;gap:10px;padding:12px;background:var(--card);border-radius:14px;margin-bottom:10px;}
+  .roommate-card .rm-avatar{width:36px;height:36px;border-radius:50%;background:var(--lemon-grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;}
+  .roommate-card .rm-name{font-size:13px;font-weight:700;}
+  .roommate-card .rm-pref{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--white);border:1px solid var(--line);padding:2px 8px;border-radius:99px;margin-left:6px;}
+  .roommate-card .rm-note{font-size:12.5px;color:var(--ink);margin-top:4px;line-height:1.4;}
 
   main{flex:1;padding:24px 20px 100px;}
 
@@ -1893,6 +1898,11 @@ function openDetail(id){
         </div>
         <div class="commission-note">${iconSvg('percent')}<span>On confirmed move-in: ${naira(landlord)} to the landlord${previewHasAffiliate ? `, ${naira(affiliate)} to the referring student` : ''}, ${naira(company)} to RoomLink.</span></div>
       </div>
+      <div class="roommate-section">
+        <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 10px">Find a Roommate</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Want to split this room's rent with someone else? Post here, or message someone already looking.</p>
+        <div id="roommatePostsList"><div class="empty" style="padding:16px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading...</h3></div></div>
+      </div>
       <div class="comments-section">
         <div class="label" style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 10px">Comments</div>
         <div id="commentsList"><div class="empty" style="padding:20px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading comments...</h3></div></div>
@@ -1920,6 +1930,7 @@ function openDetail(id){
   const messageLandlordBtn = document.getElementById('messageLandlordBtn');
   if(messageLandlordBtn) messageLandlordBtn.addEventListener('click', ()=>openChatThread(l, session.user.id));
   loadComments(l);
+  loadRoommatePosts(l);
   const commentInput = document.getElementById('commentInput');
   if(commentInput) attachLettersOnlyFilter(commentInput);
   const commentForm = document.getElementById('commentForm');
@@ -1975,6 +1986,101 @@ function renderCommentTree(data){
     const replies = repliesByParent[c.id] || [];
     return commentRowHtml(c,false) + (replies.length ? `<div class="comment-thread">${replies.map(r=>commentRowHtml(r,true)).join('')}</div>` : '');
   }).join('');
+}
+const GENDER_PREF_LABEL = { male:'Male', female:'Female', any:'Any gender' };
+async function loadRoommatePosts(listing){
+  const el = document.getElementById('roommatePostsList');
+  if(!el) return;
+  const { data, error } = await sb.from('roommate_posts')
+    .select('*, profiles(full_name)')
+    .eq('listing_id', listing.id).eq('status','active')
+    .order('created_at',{ascending:false});
+  if(error){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted)">Couldn't load roommate posts.</p>`; return; }
+  const myPost = session ? data.find(p=>p.user_id === session.user.id) : null;
+  const otherPosts = data.filter(p=>!session || p.user_id !== session.user.id);
+  let html = '';
+  html += otherPosts.length ? otherPosts.map(p=>`
+    <div class="roommate-card">
+      <div class="rm-avatar">${esc(((p.profiles && p.profiles.full_name) || 'S').charAt(0))}</div>
+      <div style="flex:1;min-width:0">
+        <span class="rm-name">${esc((p.profiles && p.profiles.full_name) || 'A student')}</span><span class="rm-pref">${GENDER_PREF_LABEL[p.gender_preference]||'Any gender'}</span>
+        ${p.note ? `<div class="rm-note">${esc(p.note)}</div>` : ''}
+        ${session ? `<button class="btn-text" data-message-roommate="${p.user_id}" data-name="${esc((p.profiles && p.profiles.full_name) || 'this student')}" style="margin-top:6px">${iconSvg('message','width="12" height="12"')}Message</button>` : ''}
+      </div>
+    </div>
+  `).join('') : `<p style="font-size:12.5px;color:var(--muted);padding:6px 0">No one's posted looking for a roommate here yet.</p>`;
+  if(session){
+    if(myPost){
+      html += `
+        <div class="roommate-card" style="border:1px dashed var(--lemon-b);background:transparent">
+          <div class="rm-avatar">${esc((profile && profile.full_name || 'Y').charAt(0))}</div>
+          <div style="flex:1;min-width:0">
+            <span class="rm-name">Your post</span><span class="rm-pref">${GENDER_PREF_LABEL[myPost.gender_preference]||'Any gender'}</span>
+            ${myPost.note ? `<div class="rm-note">${esc(myPost.note)}</div>` : ''}
+            <button class="btn-text" id="closeRoommatePostBtn" style="margin-top:6px;color:var(--danger)">Found someone — close this post</button>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `<button class="btn-secondary" id="postRoommateBtn" style="margin-top:4px">${iconSvg('spark','width="14" height="14"')}Looking for a roommate here?</button>`;
+    }
+  } else {
+    html += `<p style="font-size:12px;color:var(--muted);margin-top:6px">Log in to post or message.</p>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('[data-message-roommate]').forEach(b=>b.addEventListener('click', ()=>{
+    openChatThread(listing, session.user.id, b.dataset.messageRoommate, b.dataset.name);
+  }));
+  const postBtn = document.getElementById('postRoommateBtn');
+  if(postBtn) postBtn.addEventListener('click', ()=>openRoommatePostForm(listing));
+  const closeBtn = document.getElementById('closeRoommatePostBtn');
+  if(closeBtn) closeBtn.addEventListener('click', async ()=>{
+    try{
+      await sb.from('roommate_posts').update({ status:'closed' }).eq('id', myPost.id);
+      showToast('Post closed.');
+      await loadRoommatePosts(listing);
+    }catch(err){ showToast('Could not close post: ' + (err.message||'try again')); }
+  });
+}
+function openRoommatePostForm(listing){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sheet-content" style="padding-top:24px">
+      <button class="close-x" id="closeSheet" style="position:static;margin-bottom:16px">${iconSvg('arrowRight')}</button>
+      <h2 style="margin-bottom:4px">Looking for a roommate</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">${esc(listing.title)} · ${naira(listing.price)}/room/yr</p>
+      <form id="roommatePostForm">
+        <div class="field">
+          <label>Roommate preference</label>
+          <select name="genderPreference">
+            <option value="any">Any gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>A short note (optional)</label>
+          <textarea name="note" maxlength="300" placeholder="Move-in timing, what you're like to live with, budget split ideas..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Post</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('closeSheet').addEventListener('click', closeDetail);
+  document.getElementById('roommatePostForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try{
+      await sb.from('roommate_posts').insert({
+        listing_id: listing.id, user_id: session.user.id,
+        gender_preference: fd.get('genderPreference'), note: fd.get('note').trim() || null,
+      });
+      closeDetail();
+      showToast('Posted — other students can now see you\'re looking for a roommate here.');
+      await loadRoommatePosts(listing);
+    }catch(err){ showToast('Could not post: ' + (err.message||'try again')); }
+  });
 }
 async function loadComments(listing){
   const el = document.getElementById('commentsList');
@@ -2036,14 +2142,18 @@ function openLightbox(photos, startIndex){
 function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
 
 /* ============ Messaging (pre-booking chat with contact-detail filtering) ============ */
-async function openChatThread(listing, renterId){
+async function openChatThread(listing, renterId, recipientId, otherPersonName){
+  recipientId = recipientId || null;
   const sheet = document.getElementById('sheet');
-  const isLister = session.user.id === listing.lister_id;
+  const isLister = !recipientId && session.user.id === listing.lister_id;
+  const headerText = recipientId
+    ? `Chatting with ${esc(otherPersonName || 'this student')}`
+    : (isLister ? 'Chatting with a prospective renter' : `Chatting with ${esc(contactFor(listing).name || 'the lister')}`);
   sheet.innerHTML = `
     <div class="sheet-content" style="padding-top:24px">
       <button class="close-x" id="closeSheet" style="position:static;margin-bottom:12px">${iconSvg('arrowRight')}</button>
       <h2 style="margin-bottom:4px">${esc(listing.title)}</h2>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">${isLister ? 'Chatting with a prospective renter' : `Chatting with ${esc(contactFor(listing).name || 'the lister')}`}</p>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:16px">${headerText}</p>
       <div class="commission-note" style="margin-bottom:14px">${iconSvg('shield')}<span>For your safety, phone numbers, links, and requests to pay off-platform are automatically blocked here.</span></div>
       <div id="chatBlockedNote"></div>
       <div class="chat-thread" id="chatThread"><div class="empty" style="padding:20px 0">${iconSvg('spark')}<h3 style="font-size:13px">Loading...</h3></div></div>
@@ -2055,7 +2165,7 @@ async function openChatThread(listing, renterId){
   `;
   document.getElementById('overlay').classList.add('open');
   document.getElementById('closeSheet').addEventListener('click', closeDetail);
-  await loadChatThread(listing, renterId);
+  await loadChatThread(listing, renterId, recipientId);
   document.getElementById('chatForm').addEventListener('submit', async e=>{
     e.preventDefault();
     const input = document.getElementById('chatInput');
@@ -2068,13 +2178,13 @@ async function openChatThread(listing, renterId){
     }
     blockedNote.innerHTML = '';
     try{
-      await sb.from('messages').insert({ listing_id: listing.id, renter_id: renterId, sender_id: session.user.id, content });
-      const recipientId = isLister ? renterId : listing.lister_id;
-      if(recipientId && recipientId !== session.user.id){
-        await notifyUser(recipientId, 'message', `${(profile && profile.full_name) || 'Someone'} sent you a message about "${listing.title}".`, listing.id);
+      await sb.from('messages').insert({ listing_id: listing.id, renter_id: renterId, recipient_id: recipientId, sender_id: session.user.id, content });
+      const notifyTarget = recipientId ? (recipientId === session.user.id ? renterId : recipientId) : (isLister ? renterId : listing.lister_id);
+      if(notifyTarget && notifyTarget !== session.user.id){
+        await notifyUser(notifyTarget, 'message', `${(profile && profile.full_name) || 'Someone'} sent you a message about "${listing.title}".`, listing.id);
       }
       input.value = '';
-      await loadChatThread(listing, renterId);
+      await loadChatThread(listing, renterId, recipientId);
     }catch(err){
       // The database trigger is a second line of defense — this catches anything
       // the client-side filter missed.
@@ -2082,10 +2192,12 @@ async function openChatThread(listing, renterId){
     }
   });
 }
-async function loadChatThread(listing, renterId){
+async function loadChatThread(listing, renterId, recipientId){
   const el = document.getElementById('chatThread');
   if(!el) return;
-  const { data, error } = await sb.from('messages').select('*').eq('listing_id', listing.id).eq('renter_id', renterId).order('created_at',{ascending:true});
+  let query = sb.from('messages').select('*').eq('listing_id', listing.id).eq('renter_id', renterId).order('created_at',{ascending:true});
+  query = recipientId ? query.eq('recipient_id', recipientId) : query.is('recipient_id', null);
+  const { data, error } = await query;
   if(error){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted)">Couldn't load messages.</p>`; return; }
   if(!data.length){ el.innerHTML = `<p style="font-size:12.5px;color:var(--muted);padding:10px 0">No messages yet — ask about availability, amenities, or anything else before you commit.</p>`; return; }
   el.innerHTML = data.map(m=>{
@@ -2190,17 +2302,17 @@ async function fetchMyConversations(){
   if(!session) return [];
   await fetchMyListings();
   const myListingIds = myListings.map(l=>l.id);
-  let query = sb.from('messages').select('*, listings(title, landlord_name, lister_id), renter:profiles!renter_id(full_name)').order('created_at',{ascending:false});
-  query = myListingIds.length
-    ? query.or(`renter_id.eq.${session.user.id},listing_id.in.(${myListingIds.join(',')})`)
-    : query.eq('renter_id', session.user.id);
+  let query = sb.from('messages').select('*, listings(title, landlord_name, lister_id), renter:profiles!renter_id(full_name), recipient:profiles!recipient_id(full_name)').order('created_at',{ascending:false});
+  const orParts = [`renter_id.eq.${session.user.id}`, `recipient_id.eq.${session.user.id}`];
+  if(myListingIds.length) orParts.push(`listing_id.in.(${myListingIds.join(',')})`);
+  query = query.or(orParts.join(','));
   const { data, error } = await query;
   if(error){ console.error(error); return []; }
-  // Collapse to one row per conversation (listing + renter pair) — data is
-  // already newest-first, so the first occurrence of each key is the latest message.
+  // Collapse to one row per conversation (listing + renter + recipient) — data
+  // is already newest-first, so the first occurrence of each key is the latest message.
   const groups = {};
   data.forEach(m=>{
-    const key = m.listing_id + '_' + m.renter_id;
+    const key = m.listing_id + '_' + m.renter_id + '_' + (m.recipient_id || 'lister');
     if(!groups[key]) groups[key] = m;
   });
   return Object.values(groups);
@@ -2225,9 +2337,18 @@ async function loadConversationsInbox(){
     return;
   }
   el.innerHTML = conversations.map(m=>{
-    const isLister = session.user.id === (m.listings && m.listings.lister_id);
-    const otherName = isLister ? ((m.renter && m.renter.full_name) || 'A student') : ((m.listings && m.listings.landlord_name) || 'Lister');
-    return `<div class="conversation-row" data-listing="${m.listing_id}" data-renter="${m.renter_id}">
+    let otherName, tag;
+    if(m.recipient_id){
+      // Roommate conversation — the "other person" is whichever of renter/recipient isn't me.
+      const iAmRenter = m.renter_id === session.user.id;
+      otherName = iAmRenter ? ((m.recipient && m.recipient.full_name) || 'A student') : ((m.renter && m.renter.full_name) || 'A student');
+      tag = 'Roommate chat';
+    } else {
+      const isLister = session.user.id === (m.listings && m.listings.lister_id);
+      otherName = isLister ? ((m.renter && m.renter.full_name) || 'A student') : ((m.listings && m.listings.landlord_name) || 'Lister');
+      tag = isLister ? 'Prospective renter' : 'Listing enquiry';
+    }
+    return `<div class="conversation-row" data-listing="${m.listing_id}" data-renter="${m.renter_id}" data-recipient="${m.recipient_id||''}" data-othername="${esc(otherName)}">
       <div class="conv-avatar">${esc(otherName.charAt(0))}</div>
       <div style="flex:1;min-width:0">
         <div class="conv-title">${esc(otherName)} · ${esc(m.listings ? m.listings.title : 'Listing')}</div>
@@ -2238,12 +2359,14 @@ async function loadConversationsInbox(){
   el.querySelectorAll('.conversation-row').forEach(row=>row.addEventListener('click', async ()=>{
     const listingId = row.dataset.listing;
     const renterId = row.dataset.renter;
+    const recipientId = row.dataset.recipient || null;
+    const otherName = row.dataset.othername;
     let listing = listings.find(x=>x.id===listingId) || myListings.find(x=>x.id===listingId);
     if(!listing){
       const { data } = await sb.from('listings').select('*').eq('id', listingId).maybeSingle();
       listing = data;
     }
-    if(listing) openChatThread(listing, renterId);
+    if(listing) openChatThread(listing, renterId, recipientId, otherName);
   }));
 }
 function renderMyListings(){
